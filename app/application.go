@@ -4,18 +4,25 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
+	"strings"
 
 	"claude-code-test/config"
+	"claude-code-test/configfile"
 	"claude-code-test/core"
 	"claude-code-test/help"
+	"claude-code-test/interactive"
 )
 
 // Application represents a complete CLI application
 type Application struct {
-	config   *config.CLIConfig
-	registry *core.Registry
-	executor *core.Executor
-	helpGen  *help.Generator
+	config       *config.CLIConfig
+	registry     *core.Registry
+	executor     *core.Executor
+	helpGen      *help.Generator
+	errorFormat  *help.ErrorFormatter
+	suggestions  *help.SuggestionEngine
+	prompter     *interactive.SmartPrompter
 }
 
 // NewApplication creates a new CLI application with the given configuration
@@ -36,11 +43,21 @@ func NewApplication(cfg *config.CLIConfig) *Application {
 	// Create help generator
 	helpGen := help.NewGenerator(cfg.HelpConfig)
 	
+	// Create error formatter and suggestion engine
+	errorFormat := help.NewErrorFormatter(cfg.Name, cfg.HelpConfig.ColorEnabled)
+	suggestions := help.NewSuggestionEngine()
+	
+	// Create interactive prompter
+	prompter := interactive.NewSmartPrompter()
+	
 	return &Application{
-		config:   cfg,
-		registry: registry,
-		executor: executor,
-		helpGen:  helpGen,
+		config:      cfg,
+		registry:    registry,
+		executor:    executor,
+		helpGen:     helpGen,
+		errorFormat: errorFormat,
+		suggestions: suggestions,
+		prompter:    prompter,
 	}
 }
 
@@ -98,6 +115,25 @@ func (app *Application) Run(ctx context.Context, args []string) int {
 		return app.handleHelp(args)
 	}
 	
+	// Check if command exists before proceeding
+	commandName := args[0]
+	if _, exists := app.registry.GetCommand(commandName); !exists {
+		// Unknown command error with suggestions
+		allCommands := app.getAllCommandNames()
+		suggestions := app.suggestions.SuggestCommands(commandName, allCommands)
+		
+		errorCtx := help.NewErrorContext().
+			Type(help.ErrorTypeUnknownCommand).
+			Command(commandName).
+			Suggestions(suggestions).
+			AllCommands(allCommands).
+			Build()
+		
+		formattedError := app.errorFormat.FormatError(fmt.Errorf("unknown command"), errorCtx)
+		fmt.Fprint(os.Stderr, formattedError)
+		return 1
+	}
+	
 	// Handle version request
 	if app.isVersionRequest(args[0]) {
 		fmt.Printf("%s version %s\n", app.config.Name, app.config.Version)
@@ -107,8 +143,7 @@ func (app *Application) Run(ctx context.Context, args []string) int {
 		return 0
 	}
 	
-	// Execute command
-	commandName := args[0]
+	// Execute command  
 	commandArgs := args[1:]
 	
 	// Apply before each hook
@@ -130,9 +165,29 @@ func (app *Application) Run(ctx context.Context, args []string) int {
 		}
 	}()
 	
+	// Load configuration file if enabled
+	if app.config.AutoLoadConfig {
+		if err := app.loadConfigurationFile(commandName, commandArgs); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to load configuration file: %v\n", err)
+		}
+	}
+	
 	// Execute the command
 	if err := app.executor.Execute(ctx, commandName, commandArgs); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		// Check if this is a missing required field error and interactive mode is enabled
+		if app.config.InteractiveMode && app.isMissingRequiredFieldError(err) {
+			if interactiveErr := app.handleInteractivePrompt(ctx, commandName, commandArgs, err); interactiveErr == nil {
+				// Successfully prompted and got values, try again
+				if retryErr := app.executor.Execute(ctx, commandName, commandArgs); retryErr == nil {
+					return 0 // Success after interactive prompting
+				}
+			}
+		}
+		
+		// Enhanced error formatting
+		errorCtx := app.buildErrorContext(err, commandName, commandArgs)
+		formattedError := app.errorFormat.FormatError(err, errorCtx)
+		fmt.Fprint(os.Stderr, formattedError)
 		return app.config.ErrorHandler(err)
 	}
 	
@@ -216,6 +271,279 @@ func (app *Application) GetExecutor() *core.Executor {
 // GetHelpGenerator returns the help generator
 func (app *Application) GetHelpGenerator() *help.Generator {
 	return app.helpGen
+}
+
+// buildErrorContext builds error context for better error messages
+func (app *Application) buildErrorContext(err error, commandName string, args []string) *help.ErrorContext {
+	errorMsg := err.Error()
+	
+	// Detect error type from message
+	if strings.Contains(errorMsg, "unknown command") {
+		allCommands := app.getAllCommandNames()
+		suggestions := app.suggestions.SuggestCommands(commandName, allCommands)
+		
+		return help.NewErrorContext().
+			Type(help.ErrorTypeUnknownCommand).
+			Command(commandName).
+			Suggestions(suggestions).
+			AllCommands(allCommands).
+			Build()
+	}
+	
+	if strings.Contains(errorMsg, "unknown flag") {
+		// Extract flag from error message
+		flag := app.extractFlagFromError(errorMsg)
+		allFlags := app.getAllFlagsForCommand(commandName)
+		suggestions := app.suggestions.SuggestFlags(flag, allFlags)
+		
+		return help.NewErrorContext().
+			Type(help.ErrorTypeUnknownFlag).
+			Command(commandName).
+			Flag(flag).
+			Suggestions(suggestions).
+			AllFlags(allFlags).
+			Build()
+	}
+	
+	if strings.Contains(errorMsg, "required field") || strings.Contains(errorMsg, "missing") {
+		// Extract field from error message
+		field := app.extractFieldFromError(errorMsg)
+		requiredFlags := app.getRequiredFlagsForCommand(commandName)
+		examples := app.getExamplesForCommand(commandName)
+		
+		return help.NewErrorContext().
+			Type(help.ErrorTypeMissingRequired).
+			Command(commandName).
+			Flag(field).
+			RequiredFlags(requiredFlags).
+			Examples(examples).
+			Build()
+	}
+	
+	if strings.Contains(errorMsg, "validation failed") {
+		examples := app.getExamplesForCommand(commandName)
+		
+		return help.NewErrorContext().
+			Type(help.ErrorTypeValidation).
+			Command(commandName).
+			Examples(examples).
+			Build()
+	}
+	
+	// Default to generic error
+	return help.NewErrorContext().
+		Type(help.ErrorTypeGeneric).
+		Command(commandName).
+		Build()
+}
+
+// getAllCommandNames returns all available command names
+func (app *Application) getAllCommandNames() []string {
+	var commands []string
+	for name := range app.registry.ListCommands() {
+		commands = append(commands, name)
+	}
+	return commands
+}
+
+// getAllFlagsForCommand returns all flags for a command
+func (app *Application) getAllFlagsForCommand(commandName string) []string {
+	// This would need to be implemented based on command metadata
+	// For now, return common flags
+	return []string{"--help", "--verbose", "--debug", "--config"}
+}
+
+// getRequiredFlagsForCommand returns required flags for a command
+func (app *Application) getRequiredFlagsForCommand(commandName string) []string {
+	// This would analyze the command's config struct
+	// For now, return placeholder
+	return []string{}
+}
+
+// getExamplesForCommand returns usage examples for a command
+func (app *Application) getExamplesForCommand(commandName string) []string {
+	return []string{
+		fmt.Sprintf("%s %s [options]", app.config.Name, commandName),
+		fmt.Sprintf("%s help %s", app.config.Name, commandName),
+	}
+}
+
+// extractFlagFromError extracts flag name from error message
+func (app *Application) extractFlagFromError(errorMsg string) string {
+	// Simple extraction - could be improved with regex
+	if strings.Contains(errorMsg, "--") {
+		parts := strings.Split(errorMsg, "--")
+		if len(parts) > 1 {
+			flag := strings.Fields(parts[1])[0]
+			return "--" + flag
+		}
+	}
+	if strings.Contains(errorMsg, "-") {
+		parts := strings.Split(errorMsg, "-")
+		if len(parts) > 1 {
+			flag := strings.Fields(parts[1])[0]
+			return "-" + flag
+		}
+	}
+	return "unknown"
+}
+
+// extractFieldFromError extracts field name from error message
+func (app *Application) extractFieldFromError(errorMsg string) string {
+	// Extract field name from validation error messages
+	if strings.Contains(errorMsg, "field ") {
+		parts := strings.Split(errorMsg, "field ")
+		if len(parts) > 1 {
+			field := strings.Fields(parts[1])[0]
+			return "--" + strings.ToLower(field)
+		}
+	}
+	return "unknown"
+}
+
+// loadConfigurationFile loads configuration from file for the command
+func (app *Application) loadConfigurationFile(commandName string, args []string) error {
+	// Get command descriptor to know the config type
+	descriptor, exists := app.registry.GetCommand(commandName)
+	if !exists {
+		return nil // Command doesn't exist, skip config loading
+	}
+	
+	// Create config loader
+	configFileName := app.config.ConfigFile
+	if configFileName == "" {
+		configFileName = app.config.Name // Use app name as default
+	}
+	
+	searchPaths := app.config.ConfigPaths
+	if len(searchPaths) == 0 {
+		// Default search paths
+		searchPaths = []string{
+			".",
+			"$HOME/.config/" + app.config.Name,
+			"/etc/" + app.config.Name,
+		}
+	}
+	
+	loader := configfile.NewLoader(configFileName, searchPaths...)
+	
+	// Create instance of config struct for this command
+	configType := descriptor.GetConfigType()
+	configPtr := reflect.New(configType)
+	config := configPtr.Interface()
+	
+	// Load configuration from file
+	if err := loader.Load(config); err != nil {
+		return err
+	}
+	
+	// TODO: Merge with command line arguments
+	// For now, we just loaded the config - in a full implementation,
+	// we'd need to merge this with CLI args where CLI takes precedence
+	
+	return nil
+}
+
+// GenerateConfigFile generates an example configuration file
+func (app *Application) GenerateConfigFile(commandName string, format string) ([]byte, error) {
+	descriptor, exists := app.registry.GetCommand(commandName)
+	if !exists {
+		return nil, fmt.Errorf("command %s not found", commandName)
+	}
+	
+	generator := configfile.NewConfigGenerator()
+	configType := descriptor.GetConfigType()
+	
+	switch strings.ToLower(format) {
+	case "yaml", "yml":
+		return generator.GenerateYAML(configType)
+	case "json":
+		return generator.GenerateJSON(configType)
+	default:
+		return nil, fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+// isMissingRequiredFieldError checks if error is about missing required fields
+func (app *Application) isMissingRequiredFieldError(err error) bool {
+	errorMsg := err.Error()
+	return strings.Contains(errorMsg, "required field") || 
+		   strings.Contains(errorMsg, "missing") ||
+		   strings.Contains(errorMsg, "validation failed")
+}
+
+// handleInteractivePrompt handles interactive prompting for missing fields
+func (app *Application) handleInteractivePrompt(ctx context.Context, commandName string, args []string, originalErr error) error {
+	// Get command descriptor
+	descriptor, exists := app.registry.GetCommand(commandName)
+	if !exists {
+		return fmt.Errorf("command not found: %s", commandName)
+	}
+	
+	// Create instance of config struct for this command
+	configType := descriptor.GetConfigType()
+	configPtr := reflect.New(configType)
+	config := configPtr.Interface()
+	
+	// Load any existing configuration from files
+	if app.config.AutoLoadConfig {
+		if err := app.loadConfigIntoStruct(commandName, config); err != nil {
+			// Non-fatal, continue with prompting
+		}
+	}
+	
+	// Parse existing command line arguments to get partial config
+	if err := app.parseArgsIntoStruct(commandName, args, config); err != nil {
+		// Non-fatal, continue with prompting
+	}
+	
+	// Show friendly message about interactive mode
+	fmt.Println()
+	fmt.Printf("🤖 Interactive mode enabled. I'll help you provide the missing information.\n")
+	fmt.Printf("   Press Ctrl+C to cancel at any time.\n")
+	fmt.Println()
+	
+	// Prompt for missing required fields
+	if err := app.prompter.PromptMissing(config); err != nil {
+		return fmt.Errorf("interactive prompting failed: %w", err)
+	}
+	
+	fmt.Println()
+	fmt.Printf("✅ All required information collected!\n")
+	fmt.Println()
+	
+	// Store the filled config somewhere the executor can access it
+	// This is a simplified approach - in practice, you'd need to integrate this
+	// more deeply with the argument parsing system
+	
+	return nil
+}
+
+// loadConfigIntoStruct loads configuration file into struct
+func (app *Application) loadConfigIntoStruct(commandName string, config any) error {
+	configFileName := app.config.ConfigFile
+	if configFileName == "" {
+		configFileName = app.config.Name
+	}
+	
+	searchPaths := app.config.ConfigPaths
+	if len(searchPaths) == 0 {
+		searchPaths = []string{
+			".",
+			"$HOME/.config/" + app.config.Name,
+			"/etc/" + app.config.Name,
+		}
+	}
+	
+	loader := configfile.NewLoader(configFileName, searchPaths...)
+	return loader.Load(config)
+}
+
+// parseArgsIntoStruct parses command line arguments into struct
+func (app *Application) parseArgsIntoStruct(commandName string, args []string, config any) error {
+	// This would use the enhanced parser to populate the struct with CLI args
+	// For now, this is a placeholder
+	return nil
 }
 
 // Quick application creation functions

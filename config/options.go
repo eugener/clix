@@ -28,6 +28,14 @@ type CLIConfig struct {
 	// Global flags
 	GlobalFlags map[string]interface{}
 	
+	// Configuration file settings
+	ConfigFile     string
+	ConfigPaths    []string
+	AutoLoadConfig bool
+	
+	// Interactive mode settings
+	InteractiveMode bool
+	
 	// Error handling
 	ErrorHandler func(error) int
 	
@@ -192,6 +200,35 @@ func WithGlobalFlag(name string, value interface{}) Option {
 	}
 }
 
+// WithConfigFile sets the configuration file name
+func WithConfigFile(filename string) Option {
+	return func(c *CLIConfig) {
+		c.ConfigFile = filename
+		c.AutoLoadConfig = true
+	}
+}
+
+// WithConfigPaths sets custom search paths for configuration files
+func WithConfigPaths(paths []string) Option {
+	return func(c *CLIConfig) {
+		c.ConfigPaths = paths
+	}
+}
+
+// WithAutoLoadConfig enables or disables automatic config loading
+func WithAutoLoadConfig(enabled bool) Option {
+	return func(c *CLIConfig) {
+		c.AutoLoadConfig = enabled
+	}
+}
+
+// WithInteractiveMode enables or disables interactive prompting for missing required fields
+func WithInteractiveMode(enabled bool) Option {
+	return func(c *CLIConfig) {
+		c.InteractiveMode = enabled
+	}
+}
+
 // DefaultConfig returns a default CLI configuration
 func DefaultConfig() *CLIConfig {
 	return &CLIConfig{
@@ -202,6 +239,10 @@ func DefaultConfig() *CLIConfig {
 		Logger:         slog.Default(),
 		Middleware:     []core.Middleware{},
 		GlobalFlags:    make(map[string]interface{}),
+		ConfigFile:      "",
+		ConfigPaths:     []string{},
+		AutoLoadConfig:  false,
+		InteractiveMode: false,
 		ErrorHandler: func(err error) int {
 			if err != nil {
 				return 1
