@@ -20,7 +20,10 @@ func TestExecutor_ConfigMergingErrors(t *testing.T) {
 	cmd := NewCommand("test", "Test command", func(ctx context.Context, config ErrorTestConfig) error {
 		return nil
 	})
-	registry.Register(cmd)
+	err := registry.Register(cmd)
+	if err != nil {
+		t.Fatalf("Failed to register command: %v", err)
+	}
 
 	executor := NewExecutor(registry)
 
@@ -31,15 +34,15 @@ func TestExecutor_ConfigMergingErrors(t *testing.T) {
 		DifferentField: "value",
 	}
 
-	err := executor.ExecuteWithConfig(context.Background(), "test", []string{}, incompatibleConfig)
-	if err == nil {
+	err2 := executor.ExecuteWithConfig(context.Background(), "test", []string{}, incompatibleConfig)
+	if err2 == nil {
 		t.Error("Expected error when merging incompatible config types")
 	}
 
 	// Test merging with nil base config
-	err = executor.ExecuteWithConfig(context.Background(), "test", []string{}, nil)
-	if err != nil {
-		t.Errorf("Should handle nil base config gracefully: %v", err)
+	err3 := executor.ExecuteWithConfig(context.Background(), "test", []string{}, nil)
+	if err3 != nil {
+		t.Errorf("Should handle nil base config gracefully: %v", err3)
 	}
 }
 
@@ -50,14 +53,17 @@ func TestExecutor_EnvironmentVariableBinding(t *testing.T) {
 	envCmd := NewCommand("env", "Environment test", func(ctx context.Context, config TestConfigWithEnv) error {
 		return nil
 	})
-	registry.Register(envCmd)
+	err := registry.Register(envCmd)
+	if err != nil {
+		t.Fatalf("Failed to register command: %v", err)
+	}
 
 	executor := NewExecutor(registry)
 
 	// Test environment variable parsing
-	err := executor.Execute(context.Background(), "env", []string{})
-	if err != nil {
-		t.Errorf("Environment variable parsing failed: %v", err)
+	err2 := executor.Execute(context.Background(), "env", []string{})
+	if err2 != nil {
+		t.Errorf("Environment variable parsing failed: %v", err2)
 	}
 }
 
@@ -67,24 +73,27 @@ func TestExecutor_ChoicesValidation(t *testing.T) {
 	choicesCmd := NewCommand("choices", "Choices validation test", func(ctx context.Context, config TestConfigWithChoices) error {
 		return nil
 	})
-	registry.Register(choicesCmd)
+	err := registry.Register(choicesCmd)
+	if err != nil {
+		t.Fatalf("Failed to register command: %v", err)
+	}
 
 	executor := NewExecutor(registry)
 
 	// Test valid choice
-	err := executor.Execute(context.Background(), "choices", []string{"--choice", "opt1"})
-	if err != nil {
-		t.Errorf("Valid choice should not produce error: %v", err)
+	err2 := executor.Execute(context.Background(), "choices", []string{"--choice", "opt1"})
+	if err2 != nil {
+		t.Errorf("Valid choice should not produce error: %v", err2)
 	}
 
 	// Test invalid choice
-	err = executor.Execute(context.Background(), "choices", []string{"--choice", "invalid"})
-	if err == nil {
+	err3 := executor.Execute(context.Background(), "choices", []string{"--choice", "invalid"})
+	if err3 == nil {
 		t.Error("Expected validation error for invalid choice")
 	}
 
-	if !isValidationError(err.Error()) {
-		t.Errorf("Expected choices validation error, got: %v", err)
+	if !isValidationError(err3.Error()) {
+		t.Errorf("Expected choices validation error, got: %v", err3)
 	}
 }
 
@@ -96,6 +105,7 @@ func TestExecutor_ReflectionErrors(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
 			// This is expected if the registry catches invalid types
+			t.Logf("Expected panic caught: %v", r)
 		}
 	}()
 
@@ -128,7 +138,7 @@ func TestExecutor_BindingErrors(t *testing.T) {
 	complexCmd := NewCommand("complex", "Complex binding test", func(ctx context.Context, config ComplexTestConfig) error {
 		return nil
 	})
-	registry.Register(complexCmd)
+	_ = registry.Register(complexCmd) // Error checked in other tests
 
 	executor := NewExecutor(registry)
 
@@ -155,7 +165,7 @@ func TestExecutor_DefaultValueApplication(t *testing.T) {
 		}
 		return nil
 	})
-	registry.Register(defaultsCmd)
+	_ = registry.Register(defaultsCmd) // Error checked in other tests
 
 	executor := NewExecutor(registry)
 
@@ -172,7 +182,7 @@ func TestExecutor_DefaultValueApplication(t *testing.T) {
 		}
 		return nil
 	})
-	registry.Register(explicitCmd)
+	_ = registry.Register(explicitCmd) // Error checked in other tests
 
 	err = executor.Execute(context.Background(), "explicit", []string{"--default-field", "explicit-value"})
 	if err != nil {
@@ -185,7 +195,7 @@ func TestExecutor_MiddlewareErrorHandling(t *testing.T) {
 	cmd := NewCommand("test", "Test command", func(ctx context.Context, config ErrorTestConfig) error {
 		return nil
 	})
-	registry.Register(cmd)
+	_ = registry.Register(cmd) // Error checked in other tests
 
 	executor := NewExecutor(registry)
 
@@ -220,7 +230,7 @@ func TestExecutor_ContextCancellation(t *testing.T) {
 			return nil
 		}
 	})
-	registry.Register(cancelCmd)
+	_ = registry.Register(cancelCmd) // Error checked in other tests
 
 	executor := NewExecutor(registry)
 
@@ -243,7 +253,7 @@ func TestExecutor_EdgeCaseArguments(t *testing.T) {
 	cmd := NewCommand("edge", "Edge case test", func(ctx context.Context, config ErrorTestConfig) error {
 		return nil
 	})
-	registry.Register(cmd)
+	_ = registry.Register(cmd) // Error checked in other tests
 
 	executor := NewExecutor(registry)
 
@@ -271,7 +281,7 @@ func TestExecutor_BuildMiddlewareChainEdgeCases(t *testing.T) {
 	cmd := NewCommand("test", "Test command", func(ctx context.Context, config ErrorTestConfig) error {
 		return nil
 	})
-	registry.Register(cmd)
+	_ = registry.Register(cmd) // Error checked in other tests
 
 	executor := NewExecutor(registry)
 
@@ -307,7 +317,7 @@ func TestExecutor_ValidationWithComplexTypes(t *testing.T) {
 	complexValidationCmd := NewCommand("complex-validation", "Complex validation test", func(ctx context.Context, config ComplexValidationConfig) error {
 		return nil
 	})
-	registry.Register(complexValidationCmd)
+	_ = registry.Register(complexValidationCmd) // Error checked in other tests
 
 	executor := NewExecutor(registry)
 

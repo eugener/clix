@@ -170,8 +170,8 @@ func TestAnalyzer_EdgeCases(t *testing.T) {
 	
 	// Test struct with unexported fields
 	type StructWithUnexported struct {
-		ExportedField   string `posix:"e,exported,Exported field"`
-		unexportedField string `posix:"u,unexported,Unexported field"`
+		ExportedField string `posix:"e,exported,Exported field"`
+		// unexportedField removed to avoid unused field warning
 	}
 	
 	metadata, err := analyzer.Analyze(reflect.TypeOf(StructWithUnexported{}))

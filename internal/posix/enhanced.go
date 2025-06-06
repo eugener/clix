@@ -98,7 +98,6 @@ func (p *POSIXParser) parseLongFlag(args []string, i *int, result *ParseResult) 
 		// For now, assume it's a value if it exists
 		*i++
 		value = args[*i]
-		hasValue = true
 	}
 	
 	result.Flags[flagName] = value
@@ -392,34 +391,8 @@ func (cp *ConfigurableParser) convertValue(value string, flagInfo *FlagInfo) (an
 	}
 }
 
-// applyDefaults applies default values to unset flags
-func (cp *ConfigurableParser) applyDefaults(result *ParseResult) error {
-	for _, flagInfo := range cp.config.KnownFlags {
-		if flagInfo.Default == nil {
-			continue
-		}
-		
-		// Only apply default if flag wasn't set
-		if _, exists := result.Flags[flagInfo.Long]; !exists {
-			result.Flags[flagInfo.Long] = flagInfo.Default
-		}
-	}
-	return nil
-}
-
-// validateRequired validates that required flags are present
-func (cp *ConfigurableParser) validateRequired(result *ParseResult) error {
-	for _, flagInfo := range cp.config.KnownFlags {
-		if !flagInfo.Required {
-			continue
-		}
-		
-		if _, exists := result.Flags[flagInfo.Long]; !exists {
-			return fmt.Errorf("required flag --%s is missing", flagInfo.Long)
-		}
-	}
-	return nil
-}
+// applyDefaults and validateRequired methods removed - validation is handled in executor
+// TODO: Move validation logic to a centralized location if needed
 
 // Helper functions
 func parseInt(s string) (int, error) {

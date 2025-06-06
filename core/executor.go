@@ -113,10 +113,7 @@ func (e *Executor) ExecuteWithConfig(ctx context.Context, commandName string, ar
 	return executeFunc(execCtx)
 }
 
-// executeCommand executes the actual command
-func (e *Executor) executeCommand(execCtx *ExecutionContext, descriptor *commandDescriptor, args []string) error {
-	return e.executeCommandWithConfig(execCtx, descriptor, args, nil)
-}
+// executeCommand method removed - use executeCommandWithConfig directly
 
 // executeCommandWithConfig executes the actual command with base configuration
 func (e *Executor) executeCommandWithConfig(execCtx *ExecutionContext, descriptor *commandDescriptor, args []string, baseConfig any) error {

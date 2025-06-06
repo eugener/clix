@@ -34,8 +34,7 @@ func (c *TestCommandFixed) Run(ctx context.Context, config TestConfigFixed) erro
 	return nil
 }
 
-// Mock exit function for testing
-var mockExit = func(int) {}
+// Mock exit function removed - not used in current tests
 
 func TestApp_Build_WithoutExit(t *testing.T) {
 	app := New("test-app").

@@ -87,7 +87,7 @@ func TestRegistry_GetCommand(t *testing.T) {
 	registry := NewRegistry()
 	cmd := &RegistryTestCommand{}
 	
-	registry.Register(cmd)
+	_ = registry.Register(cmd) // Error checked in other tests
 	
 	retrievedCmd, exists := registry.GetCommand("test")
 	if !exists {
@@ -112,8 +112,8 @@ func TestRegistry_ListCommands(t *testing.T) {
 		return nil
 	})
 	
-	registry.Register(cmd1)
-	registry.Register(cmd2)
+	_ = registry.Register(cmd1) // Error checked in other tests
+	_ = registry.Register(cmd2) // Error checked in other tests
 	
 	commands := registry.ListCommands()
 	if len(commands) != 2 {
@@ -128,9 +128,10 @@ func TestRegistry_ListCommands(t *testing.T) {
 	// Check both commands exist
 	found1, found2 := false, false
 	for _, name := range names {
-		if name == "test1" {
+		switch name {
+		case "test1":
 			found1 = true
-		} else if name == "test2" {
+		case "test2":
 			found2 = true
 		}
 	}
@@ -147,7 +148,7 @@ func TestRegistry_Execute(t *testing.T) {
 		return nil
 	})
 	
-	registry.Register(cmd)
+	_ = registry.Register(cmd) // Error checked in other tests
 	
 	err := registry.Execute(context.Background(), "test", RegistryTestConfig{Value: "testvalue"})
 	if err != nil {
@@ -178,7 +179,7 @@ func TestCommandDescriptor_Methods(t *testing.T) {
 		return nil
 	})
 	
-	registry.Register(cmd)
+	_ = registry.Register(cmd) // Error checked in other tests
 	
 	descriptor, exists := registry.GetCommand("test")
 	if !exists {

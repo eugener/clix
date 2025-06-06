@@ -177,7 +177,7 @@ func TestApplication_GetRegistry(t *testing.T) {
 	)
 	
 	cmd := &AppTestCommand{}
-	app.Register(cmd)
+	_ = app.Register(cmd) // Error checked in other tests
 	
 	registry := app.GetRegistry()
 	if registry == nil {

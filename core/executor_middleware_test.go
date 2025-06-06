@@ -21,7 +21,7 @@ func TestExecutor_MiddlewareChain(t *testing.T) {
 	cmd := NewCommand("test", "Test command", func(ctx context.Context, config MiddlewareTestConfig) error {
 		return nil
 	})
-	registry.Register(cmd)
+	_ = registry.Register(cmd) // Error checked in other tests
 
 	executor := NewExecutor(registry)
 
@@ -77,7 +77,7 @@ func TestExecutor_LoggingMiddleware(t *testing.T) {
 	cmd := NewCommand("test", "Test command", func(ctx context.Context, config MiddlewareTestConfig) error {
 		return nil
 	})
-	registry.Register(cmd)
+	_ = registry.Register(cmd) // Error checked in other tests
 
 	executor := NewExecutor(registry)
 	executor.Use(LoggingMiddleware)
@@ -92,7 +92,7 @@ func TestExecutor_LoggingMiddleware(t *testing.T) {
 	errorCmd := NewCommand("error", "Error command", func(ctx context.Context, config MiddlewareTestConfig) error {
 		return fmt.Errorf("test error")
 	})
-	registry.Register(errorCmd)
+	_ = registry.Register(errorCmd) // Error checked in other tests
 
 	err = executor.Execute(context.Background(), "error", []string{})
 	if err == nil {
@@ -112,7 +112,7 @@ func TestExecutor_TimeoutMiddleware(t *testing.T) {
 			return ctx.Err()
 		}
 	})
-	registry.Register(slowCmd)
+	_ = registry.Register(slowCmd) // Error checked in other tests
 
 	executor := NewExecutor(registry)
 	executor.Use(TimeoutMiddleware(50 * time.Millisecond))
@@ -130,7 +130,7 @@ func TestExecutor_TimeoutMiddleware(t *testing.T) {
 	fastCmd := NewCommand("fast", "Fast command", func(ctx context.Context, config MiddlewareTestConfig) error {
 		return nil
 	})
-	registry.Register(fastCmd)
+	_ = registry.Register(fastCmd) // Error checked in other tests
 
 	err = executor.Execute(context.Background(), "fast", []string{})
 	if err != nil {
@@ -145,7 +145,7 @@ func TestExecutor_RecoveryMiddleware(t *testing.T) {
 	panicCmd := NewCommand("panic", "Panic command", func(ctx context.Context, config MiddlewareTestConfig) error {
 		panic("test panic")
 	})
-	registry.Register(panicCmd)
+	_ = registry.Register(panicCmd) // Error checked in other tests
 
 	executor := NewExecutor(registry)
 	executor.Use(RecoveryMiddleware)
@@ -169,7 +169,7 @@ func TestExecutor_CombinedMiddleware(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 		return nil
 	})
-	registry.Register(cmd)
+	_ = registry.Register(cmd) // Error checked in other tests
 
 	executor := NewExecutor(registry)
 	executor.Use(
@@ -190,7 +190,7 @@ func TestExecutor_ErrorPropagation(t *testing.T) {
 	errorCmd := NewCommand("error", "Error command", func(ctx context.Context, config MiddlewareTestConfig) error {
 		return fmt.Errorf("command error")
 	})
-	registry.Register(errorCmd)
+	_ = registry.Register(errorCmd) // Error checked in other tests
 
 	executor := NewExecutor(registry)
 
@@ -237,7 +237,7 @@ func TestExecutor_ContextPropagation(t *testing.T) {
 		// This tests that context is properly propagated through executor
 		return nil
 	})
-	registry.Register(contextCmd)
+	_ = registry.Register(contextCmd) // Error checked in other tests
 
 	executor := NewExecutor(registry)
 
@@ -312,7 +312,7 @@ func TestExecutor_ValidationErrors(t *testing.T) {
 	cmd := NewCommand("required", "Required field command", func(ctx context.Context, config TestConfigWithRequired) error {
 		return nil
 	})
-	registry.Register(cmd)
+	_ = registry.Register(cmd) // Error checked in other tests
 
 	executor := NewExecutor(registry)
 
@@ -334,7 +334,7 @@ func TestExecutor_ParseErrors(t *testing.T) {
 	cmd := NewCommand("parse", "Parse test command", func(ctx context.Context, config TestConfigWithRequired) error {
 		return nil
 	})
-	registry.Register(cmd)
+	_ = registry.Register(cmd) // Error checked in other tests
 
 	executor := NewExecutor(registry)
 
@@ -360,7 +360,7 @@ func TestExecutor_ConfigMerging(t *testing.T) {
 		}
 		return nil
 	})
-	registry.Register(cmd)
+	_ = registry.Register(cmd) // Error checked in other tests
 
 	executor := NewExecutor(registry)
 
@@ -409,9 +409,7 @@ func isValidationError(errMsg string) bool {
 	return containsString(errMsg, "validation failed") || containsString(errMsg, "required field")
 }
 
-func isParseError(errMsg string) bool {
-	return containsString(errMsg, "failed to parse")
-}
+// isParseError function removed - not used in current tests
 
 func containsString(s, substr string) bool {
 	return len(s) >= len(substr) && findSubstring(s, substr)

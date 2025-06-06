@@ -489,13 +489,15 @@ func (app *Application) handleInteractivePrompt(ctx context.Context, commandName
 	// Load any existing configuration from files
 	if app.config.AutoLoadConfig {
 		if err := app.loadConfigIntoStruct(commandName, config); err != nil {
-			// Non-fatal, continue with prompting
+			// Non-fatal, continue with prompting - log or handle as needed
+			_ = err // explicitly ignore error
 		}
 	}
 	
 	// Parse existing command line arguments to get partial config
 	if err := app.parseArgsIntoStruct(commandName, args, config); err != nil {
-		// Non-fatal, continue with prompting
+		// Non-fatal, continue with prompting - log or handle as needed
+		_ = err // explicitly ignore error
 	}
 	
 	// Show friendly message about interactive mode

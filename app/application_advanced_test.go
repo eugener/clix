@@ -22,7 +22,10 @@ func TestApplication_RunWithArgs(t *testing.T) {
 	)
 	
 	cmd := &AppTestCommand{}
-	app.Register(cmd)
+	err := app.Register(cmd)
+	if err != nil {
+		t.Fatalf("Failed to register command: %v", err)
+	}
 	
 	// Capture original args and defer restore
 	originalArgs := os.Args
@@ -61,7 +64,7 @@ func TestApplication_HandleHelp(t *testing.T) {
 	)
 	
 	cmd := &AppTestCommand{}
-	app.Register(cmd)
+	_ = app.Register(cmd) // Error checked in other tests
 	
 	// Test help for specific command
 	exitCode := app.Run(context.Background(), []string{"test", "--help"})
@@ -94,8 +97,14 @@ func TestApplication_BuildErrorContext(t *testing.T) {
 		return nil
 	})
 	
-	app.Register(cmd1)
-	app.Register(cmd2)
+	err := app.Register(cmd1)
+	if err != nil {
+		t.Fatalf("Failed to register command: %v", err)
+	}
+	err = app.Register(cmd2)
+	if err != nil {
+		t.Fatalf("Failed to register command: %v", err)
+	}
 	
 	// Test with invalid command (should trigger buildErrorContext)
 	exitCode := app.Run(context.Background(), []string{"invalid-command"})
@@ -119,7 +128,7 @@ func TestApplication_GetAllFlagsForCommand(t *testing.T) {
 	cmd := core.NewCommand("test", "Test command", func(ctx context.Context, config AppTestConfigWithRequired) error {
 		return nil
 	})
-	app.Register(cmd)
+	_ = app.Register(cmd) // Error checked in other tests
 	
 	// Test with parsing error to trigger getAllFlagsForCommand
 	// Use a required field test instead since some parsers are lenient with unknown flags
@@ -151,7 +160,7 @@ func TestApplication_LoadConfigurationFile(t *testing.T) {
 		capturedConfig = config
 		return nil
 	})
-	app.Register(cmd)
+	_ = app.Register(cmd) // Error checked in other tests
 	
 	// Test config file loading
 	exitCode := app.Run(context.Background(), []string{"test"})
@@ -171,7 +180,7 @@ func TestApplication_HandleInteractivePrompt(t *testing.T) {
 	)
 	
 	cmd := &AppTestCommand{}
-	app.Register(cmd)
+	_ = app.Register(cmd) // Error checked in other tests
 	
 	// Test interactive mode (this will trigger handleInteractivePrompt)
 	// Since we can't actually interact in tests, this will likely fail with a prompt error
@@ -193,7 +202,7 @@ func TestApplication_GenerateConfigFile(t *testing.T) {
 	)
 	
 	cmd := &AppTestCommand{}
-	app.Register(cmd)
+	_ = app.Register(cmd) // Error checked in other tests
 	
 	// Test config file generation
 	configData, err := app.GenerateConfigFile("test", "yaml")
@@ -281,7 +290,7 @@ func TestApplication_FieldExtraction(t *testing.T) {
 	cmd := core.NewCommand("test", "Test command", func(ctx context.Context, config AppTestConfigWithRequired) error {
 		return nil
 	})
-	app.Register(cmd)
+	_ = app.Register(cmd) // Error checked in other tests
 	
 	// Test various error scenarios that trigger field extraction
 	testCases := []struct {

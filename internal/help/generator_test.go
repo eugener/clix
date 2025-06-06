@@ -50,12 +50,9 @@ func TestErrorContext_Creation(t *testing.T) {
 	// The actual fields depend on the implementation
 	context := &ErrorContext{}
 	
-	if context == nil {
-		t.Error("ErrorContext should not be nil")
-	}
-	
 	// Test that we can create an error context without panicking
 	// The specific fields will depend on the actual implementation
+	_ = context // Use the variable to avoid unused warning
 }
 
 func TestHelpConfig_Validation(t *testing.T) {
