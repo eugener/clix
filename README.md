@@ -22,7 +22,7 @@ A powerful, type-safe, and developer-friendly CLI framework for Go with fluent A
 ## 📦 Installation
 
 ```bash
-go get github.com/eugener/clix
+go install github.com/eugener/clix@latest
 ```
 
 ## 🏃 Quick Start
