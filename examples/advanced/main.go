@@ -7,10 +7,10 @@ import (
 	"os"
 	"time"
 
-	"claude-code-test/app"
-	"claude-code-test/complete"
-	"claude-code-test/config"
-	"claude-code-test/core"
+	"github.com/eugener/clix/app"
+	"github.com/eugener/clix/complete"
+	"github.com/eugener/clix/config"
+	"github.com/eugener/clix/core"
 )
 
 // Example command configurations with advanced features

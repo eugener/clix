@@ -7,8 +7,8 @@ import (
 	"context"
 	"fmt"
 
-	"claude-code-test/cli"
-	"claude-code-test/core"
+	"github.com/eugener/clix/cli"
+	"github.com/eugener/clix/core"
 )
 
 // Example configurations for struct-based commands

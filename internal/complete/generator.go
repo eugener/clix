@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"strings"
 
-	"claude-code-test/core"
-	"claude-code-test/internal/bind"
+	"github.com/eugener/clix/core"
+	"github.com/eugener/clix/internal/bind"
 )
 
 // CompletionType represents the type of completion

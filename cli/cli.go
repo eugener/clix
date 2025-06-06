@@ -98,9 +98,9 @@ import (
 	"os"
 	"time"
 
-	"claude-code-test/app"
-	"claude-code-test/config"
-	"claude-code-test/core"
+	"github.com/eugener/clix/app"
+	"github.com/eugener/clix/config"
+	"github.com/eugener/clix/core"
 )
 
 // App represents a CLI application builder with fluent API

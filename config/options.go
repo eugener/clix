@@ -4,8 +4,8 @@ import (
 	"log/slog"
 	"time"
 
-	"claude-code-test/core"
-	"claude-code-test/internal/help"
+	"github.com/eugener/clix/core"
+	"github.com/eugener/clix/internal/help"
 )
 
 // CLIConfig holds the configuration for a CLI application

@@ -7,11 +7,11 @@ import (
 	"reflect"
 	"strings"
 
-	"claude-code-test/config"
-	"claude-code-test/core"
-	"claude-code-test/internal/configfile"
-	"claude-code-test/internal/help"
-	"claude-code-test/internal/interactive"
+	"github.com/eugener/clix/config"
+	"github.com/eugener/clix/core"
+	"github.com/eugener/clix/internal/configfile"
+	"github.com/eugener/clix/internal/help"
+	"github.com/eugener/clix/internal/interactive"
 )
 
 // Application represents a complete CLI application
