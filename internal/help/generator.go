@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"claude-code-test/internal/bind"
+	"github.com/eugener/clix/internal/bind"
 )
 
 // HelpConfig configures help generation

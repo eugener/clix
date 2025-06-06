@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"os"
 
-	"claude-code-test/app"
-	"claude-code-test/config"
-	"claude-code-test/core"
+	"github.com/eugener/clix/app"
+	"github.com/eugener/clix/config"
+	"github.com/eugener/clix/core"
 )
 
 // Simple command configurations

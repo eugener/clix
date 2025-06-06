@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"claude-code-test/internal/bind"
+	"github.com/eugener/clix/internal/bind"
 )
 
 // Prompter handles interactive prompting for missing values

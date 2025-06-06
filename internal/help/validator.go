@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"claude-code-test/internal/bind"
+	"github.com/eugener/clix/internal/bind"
 )
 
 // ValidationError represents a validation error

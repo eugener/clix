@@ -1,4 +1,4 @@
-module claude-code-test
+module github.com/eugener/clix
 
 go 1.24.3
 
