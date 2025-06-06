@@ -115,11 +115,11 @@ func (r *Registry) registerGenericCommand(cmd any) error {
 	
 	// Extract config type from Run method signature
 	runType := runMethod.Type()
-	if runType.NumIn() != 3 { // receiver, context, config
+	if runType.NumIn() != 2 { // context, config (receiver is already bound)
 		return fmt.Errorf("Run method must have signature: Run(context.Context, T) error")
 	}
 	
-	configType := runType.In(2) // Third parameter is the config
+	configType := runType.In(1) // Second parameter is the config
 	
 	// Get name and description
 	nameResult := nameMethod.Call(nil)
