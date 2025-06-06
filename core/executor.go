@@ -87,6 +87,11 @@ func (e *Executor) SetLogger(logger *slog.Logger) {
 
 // Execute runs a command with the given context and arguments
 func (e *Executor) Execute(ctx context.Context, commandName string, args []string) error {
+	return e.ExecuteWithConfig(ctx, commandName, args, nil)
+}
+
+// ExecuteWithConfig runs a command with the given context, arguments, and base configuration
+func (e *Executor) ExecuteWithConfig(ctx context.Context, commandName string, args []string, baseConfig any) error {
 	// Create execution context
 	execCtx := NewExecutionContext(ctx, commandName, args).WithLogger(e.logger)
 	
@@ -98,7 +103,7 @@ func (e *Executor) Execute(ctx context.Context, commandName string, args []strin
 	
 	// Create the base execution function
 	baseFunc := func(execCtx *ExecutionContext) error {
-		return e.executeCommand(execCtx, descriptor, args)
+		return e.executeCommandWithConfig(execCtx, descriptor, args, baseConfig)
 	}
 	
 	// Build middleware chain
@@ -110,12 +115,24 @@ func (e *Executor) Execute(ctx context.Context, commandName string, args []strin
 
 // executeCommand executes the actual command
 func (e *Executor) executeCommand(execCtx *ExecutionContext, descriptor *commandDescriptor, args []string) error {
+	return e.executeCommandWithConfig(execCtx, descriptor, args, nil)
+}
+
+// executeCommandWithConfig executes the actual command with base configuration
+func (e *Executor) executeCommandWithConfig(execCtx *ExecutionContext, descriptor *commandDescriptor, args []string, baseConfig any) error {
 	// Create config instance
 	configType := descriptor.GetConfigType()
 	configPtr := reflect.New(configType)
 	config := configPtr.Interface()
 	
-	// Parse arguments using enhanced parser
+	// Apply base configuration if provided (from config file)
+	if baseConfig != nil {
+		if err := e.mergeConfigs(config, baseConfig); err != nil {
+			return fmt.Errorf("failed to apply base configuration: %w", err)
+		}
+	}
+	
+	// Parse arguments using enhanced parser (CLI args override config file)
 	parser := NewEnhancedParser(e.binder)
 	if err := parser.Parse(args, config); err != nil {
 		return fmt.Errorf("failed to parse arguments: %w", err)
@@ -256,6 +273,53 @@ func (ep *EnhancedParser) applyEnvironmentVariables(target any) error {
 	
 	if len(envValues) > 0 {
 		return ep.binder.BindValues(target, envValues, nil)
+	}
+	
+	return nil
+}
+
+// mergeConfigs merges base configuration into target configuration
+// Values in target (from CLI args) take precedence over base (from config file)
+func (e *Executor) mergeConfigs(target, base any) error {
+	targetValue := reflect.ValueOf(target)
+	baseValue := reflect.ValueOf(base)
+	
+	if targetValue.Kind() != reflect.Ptr || targetValue.Elem().Kind() != reflect.Struct {
+		return fmt.Errorf("target must be a pointer to struct")
+	}
+	
+	if baseValue.Kind() == reflect.Ptr {
+		baseValue = baseValue.Elem()
+	}
+	
+	if baseValue.Kind() != reflect.Struct {
+		return fmt.Errorf("base must be a struct or pointer to struct")
+	}
+	
+	targetStruct := targetValue.Elem()
+	baseStruct := baseValue
+	
+	// Check that both structs have the same type
+	if targetStruct.Type() != baseStruct.Type() {
+		return fmt.Errorf("target and base configurations must have the same type")
+	}
+	
+	// Copy non-zero values from base to target where target field is zero
+	for i := 0; i < targetStruct.NumField(); i++ {
+		targetField := targetStruct.Field(i)
+		baseField := baseStruct.Field(i)
+		
+		// Skip unexported fields
+		if !targetField.CanSet() {
+			continue
+		}
+		
+		// If target field is zero and base field is not zero, copy from base
+		if targetField.IsZero() && !baseField.IsZero() {
+			if targetField.Type() == baseField.Type() {
+				targetField.Set(baseField)
+			}
+		}
 	}
 	
 	return nil

@@ -1,5 +1,0 @@
-host: localhost
-port: 3000
-debug: true
-log_level: info
-workers: 8

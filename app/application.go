@@ -166,19 +166,23 @@ func (app *Application) Run(ctx context.Context, args []string) int {
 	}()
 	
 	// Load configuration file if enabled
+	var baseConfig any
 	if app.config.AutoLoadConfig {
-		if err := app.loadConfigurationFile(commandName, commandArgs); err != nil {
+		config, err := app.loadConfigurationFile(commandName, commandArgs)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: Failed to load configuration file: %v\n", err)
+		} else {
+			baseConfig = config
 		}
 	}
 	
-	// Execute the command
-	if err := app.executor.Execute(ctx, commandName, commandArgs); err != nil {
+	// Execute the command with base config
+	if err := app.executor.ExecuteWithConfig(ctx, commandName, commandArgs, baseConfig); err != nil {
 		// Check if this is a missing required field error and interactive mode is enabled
 		if app.config.InteractiveMode && app.isMissingRequiredFieldError(err) {
 			if interactiveErr := app.handleInteractivePrompt(ctx, commandName, commandArgs, err); interactiveErr == nil {
 				// Successfully prompted and got values, try again
-				if retryErr := app.executor.Execute(ctx, commandName, commandArgs); retryErr == nil {
+				if retryErr := app.executor.ExecuteWithConfig(ctx, commandName, commandArgs, baseConfig); retryErr == nil {
 					return 0 // Success after interactive prompting
 				}
 			}
@@ -402,11 +406,11 @@ func (app *Application) extractFieldFromError(errorMsg string) string {
 }
 
 // loadConfigurationFile loads configuration from file for the command
-func (app *Application) loadConfigurationFile(commandName string, args []string) error {
+func (app *Application) loadConfigurationFile(commandName string, args []string) (any, error) {
 	// Get command descriptor to know the config type
 	descriptor, exists := app.registry.GetCommand(commandName)
 	if !exists {
-		return nil // Command doesn't exist, skip config loading
+		return nil, nil // Command doesn't exist, skip config loading
 	}
 	
 	// Create config loader
@@ -434,14 +438,11 @@ func (app *Application) loadConfigurationFile(commandName string, args []string)
 	
 	// Load configuration from file
 	if err := loader.Load(config); err != nil {
-		return err
+		return nil, err
 	}
 	
-	// TODO: Merge with command line arguments
-	// For now, we just loaded the config - in a full implementation,
-	// we'd need to merge this with CLI args where CLI takes precedence
-	
-	return nil
+	// Return the loaded config for merging with CLI arguments
+	return config, nil
 }
 
 // GenerateConfigFile generates an example configuration file
