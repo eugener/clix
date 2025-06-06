@@ -144,13 +144,35 @@ func (c *cli) generateCommandHelp(entry commandEntry) string {
 
 // extractConfigType extracts the type parameter T from Command[T]
 func extractConfigType(cmdType reflect.Type) (reflect.Type, error) {
-	// This is a simplified implementation
-	// In practice, you'd need more sophisticated reflection to extract
-	// the generic type parameter from the Command[T] interface
+	// Check if it's a CommandBase with GetConfigType method
+	if cmdType.Implements(reflect.TypeOf((*interface{ GetConfigType() reflect.Type })(nil)).Elem()) {
+		// Create instance and call GetConfigType
+		cmdValue := reflect.New(cmdType).Elem()
+		if cmdValue.Kind() == reflect.Ptr {
+			cmdValue = cmdValue.Elem()
+		}
+		
+		method := cmdValue.MethodByName("GetConfigType")
+		if method.IsValid() {
+			results := method.Call(nil)
+			if len(results) > 0 {
+				return results[0].Interface().(reflect.Type), nil
+			}
+		}
+	}
 	
-	// For now, assume the command has a method that returns the config type
-	// This would be improved with proper generic type extraction
+	// Try to extract from Run method signature
+	runMethod, found := cmdType.MethodByName("Run")
+	if !found {
+		return nil, fmt.Errorf("command must have Run method")
+	}
 	
-	// Return a placeholder - this needs proper implementation
-	return reflect.TypeOf(struct{}{}), nil
+	runType := runMethod.Type
+	if runType.NumIn() != 3 { // receiver, context, config
+		return nil, fmt.Errorf("Run method must have signature: Run(context.Context, T) error")
+	}
+	
+	// Third parameter (index 2) is the config type
+	configType := runType.In(2)
+	return configType, nil
 }
