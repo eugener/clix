@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"claude-code-test/config"
-	"claude-code-test/configfile"
 	"claude-code-test/core"
-	"claude-code-test/help"
-	"claude-code-test/interactive"
+	"claude-code-test/internal/configfile"
+	"claude-code-test/internal/help"
+	"claude-code-test/internal/interactive"
 )
 
 // Application represents a complete CLI application

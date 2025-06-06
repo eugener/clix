@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"claude-code-test/bind"
+	"claude-code-test/internal/bind"
 )
 
 // HelpConfig configures help generation
