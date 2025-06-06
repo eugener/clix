@@ -22,7 +22,7 @@ A powerful, type-safe, and developer-friendly CLI framework for Go with fluent A
 ## 📦 Installation
 
 ```bash
-go get github.com/yourorg/go-cli-framework
+go get github.com/eugener/clix
 ```
 
 ## 🏃 Quick Start
@@ -32,7 +32,7 @@ go get github.com/yourorg/go-cli-framework
 ```go
 package main
 
-import "github.com/yourorg/go-cli-framework/cli"
+import "github.com/eugener/clix/cli"
 
 func main() {
     cli.Quick("my-app",
@@ -51,7 +51,7 @@ package main
 
 import (
     "context"
-    "github.com/yourorg/go-cli-framework/cli"
+    "github.com/eugener/clix/cli"
 )
 
 func main() {
@@ -77,8 +77,8 @@ package main
 import (
     "context"
     "fmt"
-    "github.com/yourorg/go-cli-framework/cli"
-    "github.com/yourorg/go-cli-framework/core"
+    "github.com/eugener/clix/cli"
+    "github.com/eugener/clix/core"
 )
 
 type DeployConfig struct {
@@ -216,15 +216,15 @@ go run main.go --help
 
 **Modern approach (recommended):**
 ```go
-import "github.com/yourorg/go-cli-framework/cli"          // 90% of use cases
-import "github.com/yourorg/go-cli-framework/core"         // For struct-based commands
+import "github.com/eugener/clix/cli"          // 90% of use cases
+import "github.com/eugener/clix/core"         // For struct-based commands
 ```
 
 **Traditional approach (backward compatible):**
 ```go
-import "github.com/yourorg/go-cli-framework/app"          // Traditional builder
-import "github.com/yourorg/go-cli-framework/config"       // Configuration options  
-import "github.com/yourorg/go-cli-framework/core"         // Command registration
+import "github.com/eugener/clix/app"          // Traditional builder
+import "github.com/eugener/clix/config"       // Configuration options  
+import "github.com/eugener/clix/core"         // Command registration
 ```
 
 ### Backward Compatibility
