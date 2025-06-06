@@ -29,16 +29,11 @@ jobs:
     - name: Download dependencies
       run: go mod download
 
-    - name: Build
-      run: go build -v ./...
+    - name: Run full test suite
+      run: go test -v -race -cover ./...
 
-    - name: Run tests
+    - name: Run tests with coverage
       run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
 
-    - name: Test examples
-      run: |
-        cd examples/simple && go build
-        cd ../fluent-api && go build
-        cd ../interactive && go build
-        cd ../config && go build
-        cd ../advanced && go build
+    - name: Build all packages
+      run: go build -v ./...
