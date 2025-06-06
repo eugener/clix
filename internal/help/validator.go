@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"claude-code-test/bind"
+	"claude-code-test/internal/bind"
 )
 
 // ValidationError represents a validation error

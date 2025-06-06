@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"strings"
 
-	"claude-code-test/bind"
 	"claude-code-test/core"
+	"claude-code-test/internal/bind"
 )
 
 // CompletionType represents the type of completion

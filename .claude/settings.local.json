@@ -4,7 +4,11 @@
       "Bash(go mod init:*)",
       "Bash(mkdir:*)",
       "Bash(grep:*)",
-      "Bash(go run:*)"
+      "Bash(go run:*)",
+      "Bash(go build:*)",
+      "Bash(go mod:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)"
     ],
     "deny": []
   }

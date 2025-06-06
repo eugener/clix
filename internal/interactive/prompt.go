@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"claude-code-test/bind"
+	"claude-code-test/internal/bind"
 )
 
 // Prompter handles interactive prompting for missing values

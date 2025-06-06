@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"time"
 
-	"claude-code-test/bind"
-	"claude-code-test/posix"
+	"claude-code-test/internal/bind"
+	"claude-code-test/internal/posix"
 )
 
 // ExecutionContext provides enhanced context for command execution
