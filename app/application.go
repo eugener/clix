@@ -211,6 +211,7 @@ func (app *Application) showMainHelp() {
 			Name:        desc.GetName(),
 			Description: desc.GetDescription(),
 			ConfigType:  desc.GetConfigType(),
+			Aliases:     desc.GetAliases(),
 		}
 	}
 	fmt.Print(app.helpGen.GenerateMainHelp(commands))
@@ -226,6 +227,7 @@ func (app *Application) handleHelp(args []string) int {
 				Name:        desc.GetName(),
 				Description: desc.GetDescription(),
 				ConfigType:  desc.GetConfigType(),
+				Aliases:     desc.GetAliases(),
 				Examples: []string{
 					fmt.Sprintf("%s %s [options]", app.config.Name, cmdName),
 				},
@@ -282,7 +284,7 @@ func (app *Application) buildErrorContext(err error, commandName string, args []
 	errorMsg := err.Error()
 
 	// Detect error type from message
-	if strings.Contains(errorMsg, "unknown command") {
+	if strings.Contains(errorMsg, "unknown command") || strings.Contains(errorMsg, "command not found") {
 		allCommands := app.getAllCommandNames()
 		suggestions := app.suggestions.SuggestCommands(commandName, allCommands)
 
@@ -291,6 +293,33 @@ func (app *Application) buildErrorContext(err error, commandName string, args []
 			Command(commandName).
 			Suggestions(suggestions).
 			AllCommands(allCommands).
+			Build()
+	}
+
+	// Command conflict (alias conflicts, duplicate registrations)
+	if strings.Contains(errorMsg, "already registered") || strings.Contains(errorMsg, "conflict") {
+		allCommands := app.getAllCommandNames()
+		
+		return help.NewErrorContext().
+			Type(help.ErrorTypeCommandConflict).
+			Command(commandName).
+			AllCommands(allCommands).
+			Build()
+	}
+
+	// Configuration errors
+	if strings.Contains(errorMsg, "config") || strings.Contains(errorMsg, "configuration") {
+		examples := []string{
+			"# Example YAML configuration",
+			"database:",
+			"  host: localhost",
+			"  port: 5432",
+		}
+		
+		return help.NewErrorContext().
+			Type(help.ErrorTypeConfigurationError).
+			Command(commandName).
+			Examples(examples).
 			Build()
 	}
 

@@ -37,6 +37,10 @@ func (ef *ErrorFormatter) FormatError(err error, context *ErrorContext) string {
 		return ef.formatInvalidValue(err, context)
 	case ErrorTypeValidation:
 		return ef.formatValidationError(err, context)
+	case ErrorTypeCommandConflict:
+		return ef.formatCommandConflictError(err, context)
+	case ErrorTypeConfigurationError:
+		return ef.formatConfigurationError(err, context)
 	default:
 		return ef.formatBasicError(err)
 	}
@@ -52,6 +56,8 @@ const (
 	ErrorTypeMissingRequired
 	ErrorTypeInvalidValue
 	ErrorTypeValidation
+	ErrorTypeCommandConflict
+	ErrorTypeConfigurationError
 )
 
 // ErrorContext provides context for error formatting
@@ -98,9 +104,20 @@ func (ef *ErrorFormatter) formatUnknownCommand(err error, context *ErrorContext)
 		msg.WriteString("\n")
 	}
 
-	// Help hint
-	msg.WriteString(fmt.Sprintf("💬 Use %s for more information\n",
-		ef.colorize(ColorYellow, fmt.Sprintf("'%s help'", ef.programName))))
+	// Context-aware help hint
+	if context.Command != "" {
+		msg.WriteString(fmt.Sprintf("💡 Try %s to see available commands\n",
+			ef.colorize(ColorYellow, fmt.Sprintf("'%s help'", ef.programName))))
+		
+		// Add suggestion for similar looking commands
+		if len(context.Suggestions) == 0 && len(context.AllCommands) > 0 {
+			msg.WriteString(fmt.Sprintf("📝 To see all commands: %s\n",
+				ef.colorize(ColorYellow, fmt.Sprintf("'%s help'", ef.programName))))
+		}
+	} else {
+		msg.WriteString(fmt.Sprintf("💬 Use %s for more information\n",
+			ef.colorize(ColorYellow, fmt.Sprintf("'%s help'", ef.programName))))
+	}
 
 	return msg.String()
 }
@@ -457,4 +474,65 @@ func (ecb *ErrorContextBuilder) Examples(examples []string) *ErrorContextBuilder
 // Build returns the built context
 func (ecb *ErrorContextBuilder) Build() *ErrorContext {
 	return ecb.context
+}
+
+// formatCommandConflictError formats errors for command conflicts (like alias conflicts)
+func (ef *ErrorFormatter) formatCommandConflictError(err error, context *ErrorContext) string {
+	var msg strings.Builder
+
+	// Main error
+	msg.WriteString(ef.colorize(ColorRed, "❌ Command conflict: "))
+	msg.WriteString(ef.colorize(ColorBold, err.Error()))
+	msg.WriteString("\n\n")
+
+	// Helpful explanation
+	msg.WriteString("💡 This error occurs when:\n")
+	msg.WriteString("   • A command name or alias is already registered\n")
+	msg.WriteString("   • Two commands have the same name or alias\n\n")
+
+	// Available commands for reference
+	if len(context.AllCommands) > 0 {
+		msg.WriteString("📋 Currently registered commands:\n")
+		for _, cmd := range context.AllCommands {
+			msg.WriteString(fmt.Sprintf("   %s\n", ef.colorize(ColorCyan, cmd)))
+		}
+		msg.WriteString("\n")
+	}
+
+	msg.WriteString(fmt.Sprintf("💬 Use %s to see all commands\n",
+		ef.colorize(ColorYellow, fmt.Sprintf("'%s help'", ef.programName))))
+
+	return msg.String()
+}
+
+// formatConfigurationError formats configuration-related errors
+func (ef *ErrorFormatter) formatConfigurationError(err error, context *ErrorContext) string {
+	var msg strings.Builder
+
+	// Main error
+	msg.WriteString(ef.colorize(ColorRed, "❌ Configuration error: "))
+	msg.WriteString(ef.colorize(ColorBold, err.Error()))
+	msg.WriteString("\n\n")
+
+	// Configuration tips
+	msg.WriteString("💡 Configuration troubleshooting:\n")
+	msg.WriteString("   • Check configuration file syntax (YAML/JSON)\n")
+	msg.WriteString("   • Verify file permissions\n")
+	msg.WriteString("   • Ensure required configuration values are set\n\n")
+
+	// Examples if available
+	if len(context.Examples) > 0 {
+		msg.WriteString("📝 Configuration examples:\n")
+		for _, example := range context.Examples {
+			msg.WriteString(fmt.Sprintf("   %s\n", ef.colorize(ColorGreen, example)))
+		}
+		msg.WriteString("\n")
+	}
+
+	if context.Command != "" {
+		msg.WriteString(fmt.Sprintf("💬 Use %s for detailed help\n",
+			ef.colorize(ColorYellow, fmt.Sprintf("'%s help %s'", ef.programName, context.Command))))
+	}
+
+	return msg.String()
 }

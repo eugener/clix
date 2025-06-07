@@ -11,7 +11,8 @@
       "Bash(find:*)",
       "Bash(go test:*)",
       "Bash(go vet:*)",
-      "Bash(golangci-lint:*)"
+      "Bash(golangci-lint:*)",
+      "Bash(go tool cover:*)"
     ],
     "deny": []
   }
