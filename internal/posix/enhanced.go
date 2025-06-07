@@ -27,34 +27,34 @@ func (p *POSIXParser) Parse(args []string) (*ParseResult, error) {
 		Positional: make([]string, 0),
 		Remaining:  make([]string, 0),
 	}
-	
+
 	i := 0
 	endOfFlags := false
-	
+
 	for i < len(args) {
 		arg := args[i]
-		
+
 		// Handle -- (end of flags)
 		if arg == "--" {
 			endOfFlags = true
 			i++
 			continue
 		}
-		
+
 		// Handle positional arguments after --
 		if endOfFlags || !strings.HasPrefix(arg, "-") {
 			result.Positional = append(result.Positional, arg)
 			i++
 			continue
 		}
-		
+
 		// Handle single - (stdin/stdout indicator)
 		if arg == "-" {
 			result.Positional = append(result.Positional, arg)
 			i++
 			continue
 		}
-		
+
 		// Handle long flags --flag or --flag=value
 		if strings.HasPrefix(arg, "--") {
 			if err := p.parseLongFlag(args, &i, result); err != nil {
@@ -62,7 +62,7 @@ func (p *POSIXParser) Parse(args []string) (*ParseResult, error) {
 			}
 			continue
 		}
-		
+
 		// Handle short flags -f or -abc (bundled)
 		if strings.HasPrefix(arg, "-") {
 			if err := p.parseShortFlags(args, &i, result); err != nil {
@@ -70,10 +70,10 @@ func (p *POSIXParser) Parse(args []string) (*ParseResult, error) {
 			}
 			continue
 		}
-		
+
 		i++
 	}
-	
+
 	return result, nil
 }
 
@@ -81,17 +81,17 @@ func (p *POSIXParser) Parse(args []string) (*ParseResult, error) {
 func (p *POSIXParser) parseLongFlag(args []string, i *int, result *ParseResult) error {
 	arg := args[*i]
 	flagName := arg[2:] // Remove --
-	
+
 	var value any = true // Default for boolean flags
 	hasValue := false
-	
+
 	// Check for --flag=value form
 	if eqIndex := strings.Index(flagName, "="); eqIndex != -1 {
 		value = flagName[eqIndex+1:]
 		flagName = flagName[:eqIndex]
 		hasValue = true
 	}
-	
+
 	// If no explicit value and next arg doesn't start with -, use it as value
 	if !hasValue && *i+1 < len(args) && !strings.HasPrefix(args[*i+1], "-") {
 		// Try to determine if next argument is a value or positional
@@ -99,7 +99,7 @@ func (p *POSIXParser) parseLongFlag(args []string, i *int, result *ParseResult) 
 		*i++
 		value = args[*i]
 	}
-	
+
 	result.Flags[flagName] = value
 	*i++
 	return nil
@@ -109,11 +109,11 @@ func (p *POSIXParser) parseLongFlag(args []string, i *int, result *ParseResult) 
 func (p *POSIXParser) parseShortFlags(args []string, i *int, result *ParseResult) error {
 	arg := args[*i]
 	flags := arg[1:] // Remove -
-	
+
 	// Handle each character as a separate flag
 	for j, r := range flags {
 		flagName := string(r)
-		
+
 		// For bundled flags, all are boolean except possibly the last one
 		if j < len(flags)-1 {
 			// Middle flags in bundle are always boolean
@@ -121,17 +121,17 @@ func (p *POSIXParser) parseShortFlags(args []string, i *int, result *ParseResult
 		} else {
 			// Last flag might take a value
 			var value any = true // Default boolean
-			
+
 			// Check if next argument could be a value
 			if *i+1 < len(args) && !strings.HasPrefix(args[*i+1], "-") {
 				*i++
 				value = args[*i]
 			}
-			
+
 			result.Flags[flagName] = value
 		}
 	}
-	
+
 	*i++
 	return nil
 }
@@ -150,11 +150,11 @@ type FlagInfo struct {
 
 // ParserConfig configures the POSIX parser behavior
 type ParserConfig struct {
-	KnownFlags    map[string]*FlagInfo
-	StrictMode    bool // Fail on unknown flags
-	BooleanFlags  map[string]bool
-	StringFlags   map[string]bool
-	IntegerFlags  map[string]bool
+	KnownFlags   map[string]*FlagInfo
+	StrictMode   bool // Fail on unknown flags
+	BooleanFlags map[string]bool
+	StringFlags  map[string]bool
+	IntegerFlags map[string]bool
 }
 
 // ConfigurableParser provides configurable POSIX parsing
@@ -181,7 +181,7 @@ func (cp *ConfigurableParser) AddFlag(info *FlagInfo) {
 	if info.Short != "" {
 		cp.config.KnownFlags[info.Short] = info
 	}
-	
+
 	switch info.Type {
 	case "bool":
 		cp.config.BooleanFlags[info.Long] = true
@@ -208,48 +208,48 @@ func (cp *ConfigurableParser) Parse(args []string) (*ParseResult, error) {
 		Positional: make([]string, 0),
 		Remaining:  make([]string, 0),
 	}
-	
+
 	i := 0
 	endOfFlags := false
-	
+
 	for i < len(args) {
 		arg := args[i]
-		
+
 		if arg == "--" {
 			endOfFlags = true
 			i++
 			continue
 		}
-		
+
 		if endOfFlags || !strings.HasPrefix(arg, "-") {
 			result.Positional = append(result.Positional, arg)
 			i++
 			continue
 		}
-		
+
 		if arg == "-" {
 			result.Positional = append(result.Positional, arg)
 			i++
 			continue
 		}
-		
+
 		if strings.HasPrefix(arg, "--") {
 			if err := cp.parseConfiguredLongFlag(args, &i, result); err != nil {
 				return nil, err
 			}
 			continue
 		}
-		
+
 		if strings.HasPrefix(arg, "-") {
 			if err := cp.parseConfiguredShortFlags(args, &i, result); err != nil {
 				return nil, err
 			}
 			continue
 		}
-		
+
 		i++
 	}
-	
+
 	return result, nil
 }
 
@@ -257,22 +257,22 @@ func (cp *ConfigurableParser) Parse(args []string) (*ParseResult, error) {
 func (cp *ConfigurableParser) parseConfiguredLongFlag(args []string, i *int, result *ParseResult) error {
 	arg := args[*i]
 	flagName := arg[2:]
-	
+
 	var value string
 	hasValue := false
-	
+
 	if eqIndex := strings.Index(flagName, "="); eqIndex != -1 {
 		value = flagName[eqIndex+1:]
 		flagName = flagName[:eqIndex]
 		hasValue = true
 	}
-	
+
 	// Check if flag is known
 	flagInfo, known := cp.config.KnownFlags[flagName]
 	if cp.config.StrictMode && !known {
 		return fmt.Errorf("unknown flag: --%s", flagName)
 	}
-	
+
 	// Determine flag type - default to string if unknown
 	isBool := false
 	if known {
@@ -290,13 +290,13 @@ func (cp *ConfigurableParser) parseConfiguredLongFlag(args []string, i *int, res
 			isBool = true
 		}
 	}
-	
+
 	if isBool {
 		result.Flags[flagName] = true
 		*i++
 		return nil
 	}
-	
+
 	// Non-boolean flag needs a value
 	if !hasValue {
 		*i++
@@ -305,13 +305,13 @@ func (cp *ConfigurableParser) parseConfiguredLongFlag(args []string, i *int, res
 		}
 		value = args[*i]
 	}
-	
+
 	// Convert value based on type
 	convertedValue, err := cp.convertValue(value, flagInfo)
 	if err != nil {
 		return fmt.Errorf("invalid value for flag --%s: %w", flagName, err)
 	}
-	
+
 	result.Flags[flagName] = convertedValue
 	*i++
 	return nil
@@ -321,15 +321,15 @@ func (cp *ConfigurableParser) parseConfiguredLongFlag(args []string, i *int, res
 func (cp *ConfigurableParser) parseConfiguredShortFlags(args []string, i *int, result *ParseResult) error {
 	arg := args[*i]
 	flags := arg[1:]
-	
+
 	for j, r := range flags {
 		flagName := string(r)
-		
+
 		flagInfo, known := cp.config.KnownFlags[flagName]
 		if cp.config.StrictMode && !known {
 			return fmt.Errorf("unknown flag: -%s", flagName)
 		}
-		
+
 		// Determine if boolean - default to true for unknown single-char flags
 		isBool := true
 		if known {
@@ -343,32 +343,32 @@ func (cp *ConfigurableParser) parseConfiguredShortFlags(args []string, i *int, r
 				isBool = false
 			}
 		}
-		
+
 		if isBool {
 			result.Flags[flagName] = true
 			continue
 		}
-		
+
 		// Non-boolean flag must be last in bundle
 		if j < len(flags)-1 {
 			return fmt.Errorf("non-boolean flag -%s must be last in bundle", flagName)
 		}
-		
+
 		// Get value
 		*i++
 		if *i >= len(args) {
 			return fmt.Errorf("flag -%s requires a value", flagName)
 		}
-		
+
 		value := args[*i]
 		convertedValue, err := cp.convertValue(value, flagInfo)
 		if err != nil {
 			return fmt.Errorf("invalid value for flag -%s: %w", flagName, err)
 		}
-		
+
 		result.Flags[flagName] = convertedValue
 	}
-	
+
 	*i++
 	return nil
 }
@@ -378,7 +378,7 @@ func (cp *ConfigurableParser) convertValue(value string, flagInfo *FlagInfo) (an
 	if flagInfo == nil {
 		return value, nil // Default to string
 	}
-	
+
 	switch flagInfo.Type {
 	case "string":
 		return value, nil

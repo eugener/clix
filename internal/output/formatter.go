@@ -76,7 +76,9 @@ func (f *Formatter) formatJSON(data any) error {
 // formatYAML formats data as YAML
 func (f *Formatter) formatYAML(data any) error {
 	encoder := yaml.NewEncoder(f.writer)
-	defer encoder.Close()
+	defer func() {
+		_ = encoder.Close()
+	}()
 	return encoder.Encode(data)
 }
 
@@ -154,7 +156,7 @@ func (f *Formatter) renderStructSliceAsTable(value reflect.Value) error {
 	if firstElem.Kind() == reflect.Ptr {
 		firstElem = firstElem.Elem()
 	}
-	
+
 	headers := f.getStructHeaders(firstElem.Type())
 	if len(headers) == 0 {
 		return f.formatText(value.Interface())
@@ -173,10 +175,10 @@ func (f *Formatter) renderStructSliceAsTable(value reflect.Value) error {
 		if elem.Kind() == reflect.Ptr {
 			elem = elem.Elem()
 		}
-		
+
 		row := f.structToRow(elem, headers)
 		rows[i] = row
-		
+
 		for header, content := range row {
 			if len(content) > widths[header] {
 				widths[header] = len(content)
@@ -221,7 +223,7 @@ func (f *Formatter) renderMapSliceAsTable(value reflect.Value) error {
 	for i := 0; i < value.Len(); i++ {
 		elem := value.Index(i)
 		row := make(map[string]string)
-		
+
 		for _, header := range headers {
 			key := reflect.ValueOf(header)
 			val := elem.MapIndex(key)
@@ -230,7 +232,7 @@ func (f *Formatter) renderMapSliceAsTable(value reflect.Value) error {
 				content = fmt.Sprintf("%v", val.Interface())
 			}
 			row[header] = content
-			
+
 			if len(content) > widths[header] {
 				widths[header] = len(content)
 			}
@@ -245,7 +247,7 @@ func (f *Formatter) renderMapSliceAsTable(value reflect.Value) error {
 func (f *Formatter) renderSimpleSliceAsTable(value reflect.Value) error {
 	headers := []string{"Value"}
 	widths := map[string]int{"Value": 5}
-	
+
 	rows := make([]map[string]string, value.Len())
 	for i := 0; i < value.Len(); i++ {
 		content := fmt.Sprintf("%v", value.Index(i).Interface())
@@ -261,26 +263,26 @@ func (f *Formatter) renderSimpleSliceAsTable(value reflect.Value) error {
 // renderStructAsTable renders a single struct as a table
 func (f *Formatter) renderStructAsTable(value reflect.Value) error {
 	structType := value.Type()
-	
+
 	headers := []string{"Field", "Value"}
 	widths := map[string]int{"Field": 5, "Value": 5}
-	
+
 	var rows []map[string]string
 	for i := 0; i < structType.NumField(); i++ {
 		field := structType.Field(i)
 		if !field.IsExported() {
 			continue
 		}
-		
+
 		fieldName := field.Name
 		fieldValue := fmt.Sprintf("%v", value.Field(i).Interface())
-		
+
 		row := map[string]string{
 			"Field": fieldName,
 			"Value": fieldValue,
 		}
 		rows = append(rows, row)
-		
+
 		if len(fieldName) > widths["Field"] {
 			widths["Field"] = len(fieldName)
 		}
@@ -296,18 +298,18 @@ func (f *Formatter) renderStructAsTable(value reflect.Value) error {
 func (f *Formatter) renderMapAsTable(value reflect.Value) error {
 	headers := []string{"Key", "Value"}
 	widths := map[string]int{"Key": 3, "Value": 5}
-	
+
 	var rows []map[string]string
 	for _, key := range value.MapKeys() {
 		keyStr := fmt.Sprintf("%v", key.Interface())
 		valueStr := fmt.Sprintf("%v", value.MapIndex(key).Interface())
-		
+
 		row := map[string]string{
 			"Key":   keyStr,
 			"Value": valueStr,
 		}
 		rows = append(rows, row)
-		
+
 		if len(keyStr) > widths["Key"] {
 			widths["Key"] = len(keyStr)
 		}
@@ -335,7 +337,7 @@ func (f *Formatter) getStructHeaders(structType reflect.Type) []string {
 func (f *Formatter) structToRow(value reflect.Value, headers []string) map[string]string {
 	row := make(map[string]string)
 	structType := value.Type()
-	
+
 	for _, header := range headers {
 		field, found := structType.FieldByName(header)
 		if found && field.IsExported() {
@@ -345,7 +347,7 @@ func (f *Formatter) structToRow(value reflect.Value, headers []string) map[strin
 			row[header] = ""
 		}
 	}
-	
+
 	return row
 }
 
@@ -371,23 +373,23 @@ func (f *Formatter) renderTableWithData(headers []string, rows []map[string]stri
 	var topSeparatorParts []string
 	var midSeparatorParts []string
 	var bottomSeparatorParts []string
-	
+
 	for _, header := range headers {
 		line := strings.Repeat(horizontal, widths[header]+2) // +2 for padding spaces
 		topSeparatorParts = append(topSeparatorParts, line)
 		midSeparatorParts = append(midSeparatorParts, line)
 		bottomSeparatorParts = append(bottomSeparatorParts, line)
 	}
-	
+
 	topSeparator := topLeft + strings.Join(topSeparatorParts, topTee) + topRight
 	midSeparator := leftTee + strings.Join(midSeparatorParts, cross) + rightTee
 	bottomSeparator := bottomLeft + strings.Join(bottomSeparatorParts, bottomTee) + bottomRight
-	
+
 	// Render top border
 	if _, err := fmt.Fprintln(f.writer, topSeparator); err != nil {
 		return err
 	}
-	
+
 	// Render header
 	var headerParts []string
 	for _, header := range headers {
@@ -396,12 +398,12 @@ func (f *Formatter) renderTableWithData(headers []string, rows []map[string]stri
 	if _, err := fmt.Fprintf(f.writer, "%s %s %s\n", vertical, strings.Join(headerParts, " "+vertical+" "), vertical); err != nil {
 		return err
 	}
-	
+
 	// Render middle separator
 	if _, err := fmt.Fprintln(f.writer, midSeparator); err != nil {
 		return err
 	}
-	
+
 	// Render rows
 	for _, row := range rows {
 		var rowParts []string
@@ -413,7 +415,7 @@ func (f *Formatter) renderTableWithData(headers []string, rows []map[string]stri
 			return err
 		}
 	}
-	
+
 	// Render bottom border
 	_, err := fmt.Fprintln(f.writer, bottomSeparator)
 	return err

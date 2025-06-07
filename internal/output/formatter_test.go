@@ -14,19 +14,19 @@ type Person struct {
 }
 
 type Product struct {
-	ID    int    `json:"id"`
-	Name  string `json:"name"`
+	ID    int     `json:"id"`
+	Name  string  `json:"name"`
 	Price float64 `json:"price"`
 }
 
 func TestSupportedFormats(t *testing.T) {
 	formats := SupportedFormats()
 	expectedFormats := []Format{FormatJSON, FormatYAML, FormatTable, FormatText}
-	
+
 	if len(formats) != len(expectedFormats) {
 		t.Errorf("Expected %d formats, got %d", len(expectedFormats), len(formats))
 	}
-	
+
 	for _, expected := range expectedFormats {
 		found := false
 		for _, format := range formats {
@@ -54,7 +54,7 @@ func TestValidFormat(t *testing.T) {
 		{"csv", false},
 		{"", false},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.format, func(t *testing.T) {
 			result := ValidFormat(tt.format)
@@ -68,15 +68,15 @@ func TestValidFormat(t *testing.T) {
 func TestNewFormatter(t *testing.T) {
 	var buf bytes.Buffer
 	formatter := NewFormatter(&buf, FormatJSON)
-	
+
 	if formatter == nil {
 		t.Fatal("NewFormatter returned nil")
 	}
-	
+
 	if formatter.writer != &buf {
 		t.Error("Formatter writer not set correctly")
 	}
-	
+
 	if formatter.format != FormatJSON {
 		t.Error("Formatter format not set correctly")
 	}
@@ -107,17 +107,17 @@ func TestFormatter_FormatJSON(t *testing.T) {
 			want: []string{"name", "test", "count", "42"},
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			formatter := NewFormatter(&buf, FormatJSON)
-			
+
 			err := formatter.Format(tt.data)
 			if err != nil {
 				t.Fatalf("Format() error = %v", err)
 			}
-			
+
 			output := buf.String()
 			for _, want := range tt.want {
 				if !strings.Contains(output, want) {
@@ -145,17 +145,17 @@ func TestFormatter_FormatYAML(t *testing.T) {
 			want: []string{"- apple", "- banana", "- cherry"},
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			formatter := NewFormatter(&buf, FormatYAML)
-			
+
 			err := formatter.Format(tt.data)
 			if err != nil {
 				t.Fatalf("Format() error = %v", err)
 			}
-			
+
 			output := buf.String()
 			for _, want := range tt.want {
 				if !strings.Contains(output, want) {
@@ -196,17 +196,17 @@ func TestFormatter_FormatTable(t *testing.T) {
 			want: []string{"Value", "apple", "banana", "cherry", "│", "┌", "─"},
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			formatter := NewFormatter(&buf, FormatTable)
-			
+
 			err := formatter.Format(tt.data)
 			if err != nil {
 				t.Fatalf("Format() error = %v", err)
 			}
-			
+
 			output := buf.String()
 			for _, want := range tt.want {
 				if !strings.Contains(output, want) {
@@ -239,17 +239,17 @@ func TestFormatter_FormatText(t *testing.T) {
 			want: "Alice",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			formatter := NewFormatter(&buf, FormatText)
-			
+
 			err := formatter.Format(tt.data)
 			if err != nil {
 				t.Fatalf("Format() error = %v", err)
 			}
-			
+
 			output := buf.String()
 			if !strings.Contains(output, tt.want) {
 				t.Errorf("Text output missing %q\nFull output:\n%s", tt.want, output)
@@ -261,12 +261,12 @@ func TestFormatter_FormatText(t *testing.T) {
 func TestFormatter_UnsupportedFormat(t *testing.T) {
 	var buf bytes.Buffer
 	formatter := NewFormatter(&buf, Format("xml"))
-	
+
 	err := formatter.Format("test data")
 	if err == nil {
 		t.Error("Expected error for unsupported format")
 	}
-	
+
 	if !strings.Contains(err.Error(), "unsupported format") {
 		t.Errorf("Expected unsupported format error, got: %v", err)
 	}
@@ -284,17 +284,17 @@ func TestFormatter_EmptyData(t *testing.T) {
 		{"nil data JSON", FormatJSON, nil},
 		{"nil data YAML", FormatYAML, nil},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			formatter := NewFormatter(&buf, tt.format)
-			
+
 			err := formatter.Format(tt.data)
 			if err != nil {
 				t.Errorf("Format() error = %v", err)
 			}
-			
+
 			// Should not panic and should produce some output
 			output := buf.String()
 			if output == "" && tt.format != FormatTable {
@@ -309,7 +309,7 @@ func TestFormatter_ComplexStructures(t *testing.T) {
 		Products []Product `json:"products"`
 		Total    int       `json:"total"`
 	}
-	
+
 	data := NestedStruct{
 		Products: []Product{
 			{ID: 1, Name: "Laptop", Price: 999.99},
@@ -317,24 +317,24 @@ func TestFormatter_ComplexStructures(t *testing.T) {
 		},
 		Total: 2,
 	}
-	
+
 	formats := []Format{FormatJSON, FormatYAML, FormatTable}
-	
+
 	for _, format := range formats {
 		t.Run(string(format), func(t *testing.T) {
 			var buf bytes.Buffer
 			formatter := NewFormatter(&buf, format)
-			
+
 			err := formatter.Format(data)
 			if err != nil {
 				t.Fatalf("Format() error = %v", err)
 			}
-			
+
 			output := buf.String()
 			if output == "" {
 				t.Error("Expected non-empty output")
 			}
-			
+
 			// Check that essential data is present
 			if !strings.Contains(output, "Laptop") {
 				t.Error("Output missing 'Laptop'")
@@ -350,11 +350,11 @@ func BenchmarkFormatter_JSON(b *testing.B) {
 		{Name: "Bob", Age: 25, City: "San Francisco"},
 		{Name: "Charlie", Age: 35, City: "Chicago"},
 	}
-	
+
 	for i := 0; i < b.N; i++ {
 		var buf bytes.Buffer
 		formatter := NewFormatter(&buf, FormatJSON)
-		formatter.Format(data)
+		_ = formatter.Format(data)
 	}
 }
 
@@ -364,10 +364,10 @@ func BenchmarkFormatter_Table(b *testing.B) {
 		{Name: "Bob", Age: 25, City: "San Francisco"},
 		{Name: "Charlie", Age: 35, City: "Chicago"},
 	}
-	
+
 	for i := 0; i < b.N; i++ {
 		var buf bytes.Buffer
 		formatter := NewFormatter(&buf, FormatTable)
-		formatter.Format(data)
+		_ = formatter.Format(data)
 	}
 }

@@ -281,28 +281,28 @@ func (a *App) Build() *app.Application {
 		config.WithName(a.name),
 		config.WithVersion(a.version),
 	}
-	
+
 	if a.description != "" {
 		allOptions = append(allOptions, config.WithDescription(a.description))
 	}
-	
+
 	if a.author != "" {
 		allOptions = append(allOptions, config.WithAuthor(a.author))
 	}
-	
+
 	// Add all builder options
 	allOptions = append(allOptions, a.options...)
-	
+
 	// Create application
 	application := app.NewApplicationWithOptions(allOptions...)
-	
+
 	// Register all commands
 	for _, cmd := range a.commands {
 		if err := application.Register(cmd); err != nil {
 			panic("Failed to register command: " + err.Error())
 		}
 	}
-	
+
 	return application
 }
 

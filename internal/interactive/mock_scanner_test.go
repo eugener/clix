@@ -43,13 +43,6 @@ func (ms *MockScanner) SetError(err error) {
 	ms.err = err
 }
 
-// Helper function to create a prompter with mocked input
-func createPrompterWithMockInput(inputs ...string) *Prompter {
-	scanner := NewMockScanner(inputs...)
-	prompter := NewPrompter()
-	prompter.scanner = scanner
-	return prompter
-}
 
 func TestConfirmPrompter_WithMockInput(t *testing.T) {
 	tests := []struct {
@@ -141,19 +134,19 @@ func TestConfirmPrompter_WithMockInput(t *testing.T) {
 			wantErr:      false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			scanner := NewMockScanner(tt.inputs...)
 			prompter := &ConfirmPrompter{scanner: scanner}
-			
+
 			got, err := prompter.Confirm(tt.message, tt.defaultValue)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Confirm() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			
+
 			if got != tt.want {
 				t.Errorf("Confirm() = %v, want %v", got, tt.want)
 			}
@@ -219,19 +212,19 @@ func TestSelectPrompter_WithMockInput(t *testing.T) {
 			wantErr: false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			scanner := NewMockScanner(tt.inputs...)
 			prompter := &SelectPrompter{scanner: scanner}
-			
+
 			got, err := prompter.Select(tt.message, tt.options)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Select() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			
+
 			if got != tt.want {
 				t.Errorf("Select() = %v, want %v", got, tt.want)
 			}
@@ -281,19 +274,19 @@ func TestMultilinePrompter_WithMockInput(t *testing.T) {
 			wantErr:   false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			scanner := NewMockScanner(tt.inputs...)
 			prompter := &MultilinePrompter{scanner: scanner}
-			
+
 			got, err := prompter.PromptMultiline(tt.message, tt.endMarker)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("PromptMultiline() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			
+
 			if got != tt.want {
 				t.Errorf("PromptMultiline() = %q, want %q", got, tt.want)
 			}
@@ -304,19 +297,19 @@ func TestMultilinePrompter_WithMockInput(t *testing.T) {
 func TestSmartPrompter_WithMockInput(t *testing.T) {
 	t.Run("PromptMissing delegates to basic prompter", func(t *testing.T) {
 		smartPrompter := NewSmartPrompter()
-		
+
 		// Test with invalid target (should return error)
 		err := smartPrompter.PromptMissing("not a pointer")
 		if err == nil {
 			t.Error("Expected error for invalid target")
 		}
 	})
-	
+
 	t.Run("Confirm delegates to confirm prompter", func(t *testing.T) {
 		scanner := NewMockScanner("yes")
 		smartPrompter := NewSmartPrompter()
 		smartPrompter.confirm.scanner = scanner
-		
+
 		got, err := smartPrompter.Confirm("Continue?", false)
 		if err != nil {
 			t.Errorf("Confirm() error = %v", err)
@@ -325,12 +318,12 @@ func TestSmartPrompter_WithMockInput(t *testing.T) {
 			t.Error("Expected true for 'yes' input")
 		}
 	})
-	
+
 	t.Run("Select delegates to select prompter", func(t *testing.T) {
 		scanner := NewMockScanner("1")
 		smartPrompter := NewSmartPrompter()
 		smartPrompter.select_.scanner = scanner
-		
+
 		got, err := smartPrompter.Select("Choose", []string{"option1", "option2"})
 		if err != nil {
 			t.Errorf("Select() error = %v", err)
@@ -339,12 +332,12 @@ func TestSmartPrompter_WithMockInput(t *testing.T) {
 			t.Errorf("Expected 'option1', got %v", got)
 		}
 	})
-	
+
 	t.Run("PromptMultiline delegates to multiline prompter", func(t *testing.T) {
 		scanner := NewMockScanner("line1", "EOF")
 		smartPrompter := NewSmartPrompter()
 		smartPrompter.multiline.scanner = scanner
-		
+
 		got, err := smartPrompter.PromptMultiline("Enter text", "EOF")
 		if err != nil {
 			t.Errorf("PromptMultiline() error = %v", err)
@@ -360,26 +353,26 @@ func TestPrompter_ErrorScenarios(t *testing.T) {
 	t.Run("ConfirmPrompter scan failure", func(t *testing.T) {
 		scanner := NewMockScanner()
 		prompter := &ConfirmPrompter{scanner: scanner}
-		
+
 		_, err := prompter.Confirm("Continue?", false)
 		if err == nil {
 			t.Error("Expected error when scanner fails")
 		}
-		
+
 		if !strings.Contains(err.Error(), "failed to read input") {
 			t.Errorf("Expected 'failed to read input' error, got: %v", err)
 		}
 	})
-	
+
 	t.Run("SelectPrompter scan failure", func(t *testing.T) {
 		scanner := NewMockScanner()
 		prompter := &SelectPrompter{scanner: scanner}
-		
+
 		_, err := prompter.Select("Choose", []string{"option1"})
 		if err == nil {
 			t.Error("Expected error when scanner fails")
 		}
-		
+
 		if !strings.Contains(err.Error(), "failed to read input") {
 			t.Errorf("Expected 'failed to read input' error, got: %v", err)
 		}
@@ -391,17 +384,17 @@ func TestPrompter_WithStringReader(t *testing.T) {
 	input := "test input\n"
 	reader := strings.NewReader(input)
 	scanner := bufio.NewScanner(reader)
-	
+
 	prompter := &Prompter{
 		scanner:  scanner,
 		analyzer: NewPrompter().analyzer,
 	}
-	
+
 	// Test that we can create a prompter with a real scanner
 	if prompter.scanner == nil {
 		t.Error("Scanner should not be nil")
 	}
-	
+
 	if prompter.analyzer == nil {
 		t.Error("Analyzer should not be nil")
 	}

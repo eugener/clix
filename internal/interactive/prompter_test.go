@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-	
+
 	"github.com/eugener/clix/internal/bind"
 )
 
@@ -29,11 +29,11 @@ func TestNewPrompter(t *testing.T) {
 	if prompter == nil {
 		t.Fatal("NewPrompter returned nil")
 	}
-	
+
 	if prompter.scanner == nil {
 		t.Error("Prompter scanner is nil")
 	}
-	
+
 	if prompter.analyzer == nil {
 		t.Error("Prompter analyzer is nil")
 	}
@@ -41,7 +41,7 @@ func TestNewPrompter(t *testing.T) {
 
 func TestPrompter_ValidateInput(t *testing.T) {
 	prompter := NewPrompter()
-	
+
 	tests := []struct {
 		name      string
 		input     string
@@ -156,16 +156,16 @@ func TestPrompter_ValidateInput(t *testing.T) {
 			errMsg:  "must be a valid decimal number",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := prompter.validateInput(tt.input, tt.fieldInfo)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateInput() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			
+
 			if tt.wantErr && !strings.Contains(err.Error(), tt.errMsg) {
 				t.Errorf("validateInput() error = %v, expected to contain %v", err, tt.errMsg)
 			}
@@ -175,7 +175,7 @@ func TestPrompter_ValidateInput(t *testing.T) {
 
 func TestPrompter_SetFieldValue(t *testing.T) {
 	prompter := NewPrompter()
-	
+
 	tests := []struct {
 		name      string
 		fieldType reflect.Type
@@ -254,17 +254,17 @@ func TestPrompter_SetFieldValue(t *testing.T) {
 			wantErr:   false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			field := reflect.New(tt.fieldType).Elem()
 			err := prompter.setFieldValue(field, tt.fieldType, tt.value)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("setFieldValue() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			
+
 			if !tt.wantErr {
 				var got any
 				switch tt.fieldType.Kind() {
@@ -285,7 +285,7 @@ func TestPrompter_SetFieldValue(t *testing.T) {
 						got = slice
 					}
 				}
-				
+
 				if !reflect.DeepEqual(got, tt.wantValue) {
 					t.Errorf("setFieldValue() got = %v, want %v", got, tt.wantValue)
 				}
@@ -296,7 +296,7 @@ func TestPrompter_SetFieldValue(t *testing.T) {
 
 func TestPrompter_ParseBool(t *testing.T) {
 	prompter := NewPrompter()
-	
+
 	tests := []struct {
 		name    string
 		value   string
@@ -311,7 +311,7 @@ func TestPrompter_ParseBool(t *testing.T) {
 		{"1", "1", true, false},
 		{"on", "on", true, false},
 		{"TRUE", "TRUE", true, false}, // Case insensitive
-		
+
 		// False values
 		{"false", "false", false, false},
 		{"f", "f", false, false},
@@ -321,21 +321,21 @@ func TestPrompter_ParseBool(t *testing.T) {
 		{"off", "off", false, false},
 		{"empty", "", false, false},
 		{"FALSE", "FALSE", false, false}, // Case insensitive
-		
+
 		// Invalid values
 		{"invalid", "maybe", false, true},
 		{"invalid2", "invalid", false, true},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := prompter.parseBool(tt.value)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseBool() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			
+
 			if got != tt.want {
 				t.Errorf("parseBool() = %v, want %v", got, tt.want)
 			}
@@ -345,7 +345,7 @@ func TestPrompter_ParseBool(t *testing.T) {
 
 func TestPrompter_GetTypeHint(t *testing.T) {
 	prompter := NewPrompter()
-	
+
 	tests := []struct {
 		name      string
 		fieldInfo bind.FieldInfo
@@ -395,7 +395,7 @@ func TestPrompter_GetTypeHint(t *testing.T) {
 			want: "comma-separated",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := prompter.getTypeHint(tt.fieldInfo)
@@ -408,7 +408,7 @@ func TestPrompter_GetTypeHint(t *testing.T) {
 
 func TestPrompter_BuildPrompt(t *testing.T) {
 	prompter := NewPrompter()
-	
+
 	tests := []struct {
 		name      string
 		fieldInfo bind.FieldInfo
@@ -451,11 +451,11 @@ func TestPrompter_BuildPrompt(t *testing.T) {
 			want: []string{"count", "(number)", ":"},
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := prompter.buildPrompt(tt.fieldInfo)
-			
+
 			for _, want := range tt.want {
 				if !strings.Contains(got, want) {
 					t.Errorf("buildPrompt() output missing '%s'\\nFull output: %s", want, got)
@@ -467,7 +467,7 @@ func TestPrompter_BuildPrompt(t *testing.T) {
 
 func TestPrompter_SupportsColor(t *testing.T) {
 	prompter := NewPrompter()
-	
+
 	// Test that function doesn't panic and returns a boolean
 	result := prompter.supportsColor()
 	if result != true && result != false {
@@ -480,7 +480,7 @@ func TestNewConfirmPrompter(t *testing.T) {
 	if prompter == nil {
 		t.Fatal("NewConfirmPrompter returned nil")
 	}
-	
+
 	if prompter.scanner == nil {
 		t.Error("ConfirmPrompter scanner is nil")
 	}
@@ -491,7 +491,7 @@ func TestNewSelectPrompter(t *testing.T) {
 	if prompter == nil {
 		t.Fatal("NewSelectPrompter returned nil")
 	}
-	
+
 	if prompter.scanner == nil {
 		t.Error("SelectPrompter scanner is nil")
 	}
@@ -499,12 +499,12 @@ func TestNewSelectPrompter(t *testing.T) {
 
 func TestSelectPrompter_SelectWithNoOptions(t *testing.T) {
 	prompter := NewSelectPrompter()
-	
+
 	_, err := prompter.Select("Choose an option", []string{})
 	if err == nil {
 		t.Error("Select() should return error for empty options")
 	}
-	
+
 	if !strings.Contains(err.Error(), "no options") {
 		t.Errorf("Expected error about no options, got: %v", err)
 	}
@@ -515,7 +515,7 @@ func TestNewMultilinePrompter(t *testing.T) {
 	if prompter == nil {
 		t.Fatal("NewMultilinePrompter returned nil")
 	}
-	
+
 	if prompter.scanner == nil {
 		t.Error("MultilinePrompter scanner is nil")
 	}
@@ -526,55 +526,54 @@ func TestNewSmartPrompterDetailed(t *testing.T) {
 	if prompter == nil {
 		t.Fatal("NewSmartPrompter returned nil")
 	}
-	
+
 	if prompter.basic == nil {
 		t.Error("SmartPrompter basic is nil")
 	}
-	
+
 	if prompter.confirm == nil {
 		t.Error("SmartPrompter confirm is nil")
 	}
-	
+
 	if prompter.select_ == nil {
 		t.Error("SmartPrompter select_ is nil")
 	}
-	
+
 	if prompter.multiline == nil {
 		t.Error("SmartPrompter multiline is nil")
 	}
 }
 
-
 // Test edge cases and error scenarios
 func TestPrompter_EdgeCases(t *testing.T) {
 	prompter := NewPrompter()
-	
+
 	t.Run("unsupported field type", func(t *testing.T) {
 		field := reflect.New(reflect.TypeOf(complex64(1))).Elem()
 		err := prompter.setFieldValue(field, reflect.TypeOf(complex64(1)), "1+2i")
-		
+
 		if err == nil {
 			t.Error("Expected error for unsupported field type")
 		}
-		
+
 		if !strings.Contains(err.Error(), "unsupported field type") {
 			t.Errorf("Expected unsupported field type error, got: %v", err)
 		}
 	})
-	
+
 	t.Run("invalid boolean for parseBool", func(t *testing.T) {
 		_, err := prompter.parseBool("invalid-bool")
 		if err == nil {
 			t.Error("Expected error for invalid boolean")
 		}
 	})
-	
+
 	t.Run("validateInput with complex field types", func(t *testing.T) {
 		// Test validation with different reflect.Type kinds
 		fieldInfo := bind.FieldInfo{
 			Type: reflect.TypeOf(int8(0)),
 		}
-		
+
 		err := prompter.validateInput("200", fieldInfo)
 		if err != nil {
 			t.Errorf("Unexpected error for int8: %v", err)
@@ -585,14 +584,14 @@ func TestPrompter_EdgeCases(t *testing.T) {
 func TestPrompter_Integration(t *testing.T) {
 	// These tests verify the overall flow without actual user input
 	prompter := NewPrompter()
-	
+
 	t.Run("PromptForMissing with invalid target", func(t *testing.T) {
 		// Test with non-pointer
 		err := prompter.PromptForMissing("not a pointer")
 		if err == nil {
 			t.Error("Expected error for non-pointer target")
 		}
-		
+
 		// Test with pointer to non-struct
 		str := "not a struct"
 		err = prompter.PromptForMissing(&str)

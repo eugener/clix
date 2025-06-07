@@ -29,16 +29,16 @@ func (ves ValidationErrors) Error() string {
 	if len(ves) == 0 {
 		return ""
 	}
-	
+
 	if len(ves) == 1 {
 		return ves[0].Error()
 	}
-	
+
 	var msgs []string
 	for _, ve := range ves {
 		msgs = append(msgs, ve.Error())
 	}
-	
+
 	return fmt.Sprintf("multiple validation errors:\n- %s", strings.Join(msgs, "\n- "))
 }
 
@@ -60,25 +60,25 @@ func (v *Validator) Validate(config any) error {
 	if configValue.Kind() == reflect.Ptr {
 		configValue = configValue.Elem()
 	}
-	
+
 	if configValue.Kind() != reflect.Struct {
 		return fmt.Errorf("config must be a struct")
 	}
-	
+
 	metadata, err := v.analyzer.Analyze(configValue.Type())
 	if err != nil {
 		return err
 	}
-	
+
 	var errors ValidationErrors
-	
+
 	// Validate each field
 	for _, fieldInfo := range metadata.Fields {
 		field := configValue.FieldByName(fieldInfo.Name)
 		if !field.IsValid() {
 			continue
 		}
-		
+
 		if err := v.validateField(fieldInfo, field); err != nil {
 			if ve, ok := err.(*ValidationError); ok {
 				errors = append(errors, *ve)
@@ -91,18 +91,18 @@ func (v *Validator) Validate(config any) error {
 			}
 		}
 	}
-	
+
 	if len(errors) > 0 {
 		return errors
 	}
-	
+
 	return nil
 }
 
 // validateField validates a single field
 func (v *Validator) validateField(fieldInfo bind.FieldInfo, field reflect.Value) error {
 	value := field.Interface()
-	
+
 	// Check if required field is set
 	if fieldInfo.Required && v.isZeroValue(field) {
 		return &ValidationError{
@@ -111,19 +111,19 @@ func (v *Validator) validateField(fieldInfo bind.FieldInfo, field reflect.Value)
 			Message: "field is required",
 		}
 	}
-	
+
 	// Skip validation for zero values of optional fields
 	if !fieldInfo.Required && v.isZeroValue(field) {
 		return nil
 	}
-	
+
 	// Validate choices
 	if len(fieldInfo.Choices) > 0 {
 		if err := v.validateChoices(fieldInfo, value); err != nil {
 			return err
 		}
 	}
-	
+
 	// Type-specific validation
 	switch fieldInfo.Type.Kind() {
 	case reflect.String:
@@ -137,7 +137,7 @@ func (v *Validator) validateField(fieldInfo bind.FieldInfo, field reflect.Value)
 	case reflect.Slice:
 		return v.validateSlice(fieldInfo, field)
 	}
-	
+
 	return nil
 }
 
@@ -147,15 +147,15 @@ func (v *Validator) validateChoices(fieldInfo bind.FieldInfo, value any) error {
 	if len(fieldInfo.Choices) == 0 {
 		return nil
 	}
-	
+
 	valueStr := fmt.Sprintf("%v", value)
-	
+
 	for _, choice := range fieldInfo.Choices {
 		if valueStr == choice {
 			return nil
 		}
 	}
-	
+
 	return &ValidationError{
 		Field:   fieldInfo.Name,
 		Value:   value,
@@ -167,7 +167,7 @@ func (v *Validator) validateChoices(fieldInfo bind.FieldInfo, value any) error {
 func (v *Validator) validateString(fieldInfo bind.FieldInfo, value string) error {
 	// Add string-specific validation rules here
 	// For example: min/max length, regex patterns, etc.
-	
+
 	return nil
 }
 
@@ -175,21 +175,21 @@ func (v *Validator) validateString(fieldInfo bind.FieldInfo, value string) error
 func (v *Validator) validateInt(fieldInfo bind.FieldInfo, value int64) error {
 	// Add integer-specific validation rules here
 	// For example: min/max values, ranges, etc.
-	
+
 	return nil
 }
 
 // validateUint validates unsigned integer fields
 func (v *Validator) validateUint(fieldInfo bind.FieldInfo, value uint64) error {
 	// Add unsigned integer-specific validation rules here
-	
+
 	return nil
 }
 
 // validateFloat validates float fields
 func (v *Validator) validateFloat(fieldInfo bind.FieldInfo, value float64) error {
 	// Add float-specific validation rules here
-	
+
 	return nil
 }
 
@@ -198,11 +198,11 @@ func (v *Validator) validateSlice(fieldInfo bind.FieldInfo, field reflect.Value)
 	// Validate each element in the slice
 	for i := 0; i < field.Len(); i++ {
 		elem := field.Index(i)
-		
+
 		// Create a temporary field info for the element
 		elemFieldInfo := fieldInfo
 		elemFieldInfo.Type = fieldInfo.Type.Elem()
-		
+
 		if err := v.validateField(elemFieldInfo, elem); err != nil {
 			return &ValidationError{
 				Field:   fmt.Sprintf("%s[%d]", fieldInfo.Name, i),
@@ -211,7 +211,7 @@ func (v *Validator) validateSlice(fieldInfo bind.FieldInfo, field reflect.Value)
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -254,11 +254,11 @@ func EmailValidator(value any) error {
 	if !ok {
 		return fmt.Errorf("email validator requires string value")
 	}
-	
+
 	if !strings.Contains(email, "@") || !strings.Contains(email, ".") {
 		return fmt.Errorf("invalid email format")
 	}
-	
+
 	return nil
 }
 
@@ -268,11 +268,11 @@ func URLValidator(value any) error {
 	if !ok {
 		return fmt.Errorf("URL validator requires string value")
 	}
-	
+
 	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
 		return fmt.Errorf("URL must start with http:// or https://")
 	}
-	
+
 	return nil
 }
 
@@ -280,7 +280,7 @@ func URLValidator(value any) error {
 func RangeValidator(min, max float64) CustomValidator {
 	return func(value any) error {
 		var num float64
-		
+
 		switch v := value.(type) {
 		case int:
 			num = float64(v)
@@ -299,11 +299,11 @@ func RangeValidator(min, max float64) CustomValidator {
 		default:
 			return fmt.Errorf("range validator requires numeric value")
 		}
-		
+
 		if num < min || num > max {
 			return fmt.Errorf("value %.2f must be between %.2f and %.2f", num, min, max)
 		}
-		
+
 		return nil
 	}
 }
@@ -315,12 +315,12 @@ func LengthValidator(min, max int) CustomValidator {
 		if !ok {
 			return fmt.Errorf("length validator requires string value")
 		}
-		
+
 		length := len(str)
 		if length < min || length > max {
 			return fmt.Errorf("length %d must be between %d and %d", length, min, max)
 		}
-		
+
 		return nil
 	}
 }
@@ -332,7 +332,7 @@ func PatternValidator(pattern string) CustomValidator {
 		if !ok {
 			return fmt.Errorf("pattern validator requires string value")
 		}
-		
+
 		// Simple pattern matching - in a real implementation,
 		// you'd use regexp package
 		if pattern == "alphanumeric" {
@@ -342,7 +342,7 @@ func PatternValidator(pattern string) CustomValidator {
 				}
 			}
 		}
-		
+
 		return nil
 	}
 }

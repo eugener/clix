@@ -50,11 +50,11 @@ func (a *Analyzer) Analyze(structType reflect.Type) (*StructMetadata, error) {
 	if structType.Kind() == reflect.Ptr {
 		structType = structType.Elem()
 	}
-	
+
 	if structType.Kind() != reflect.Struct {
 		return nil, fmt.Errorf("expected struct type, got %s", structType.Kind())
 	}
-	
+
 	metadata := &StructMetadata{
 		Fields:      make([]FieldInfo, 0),
 		FieldMap:    make(map[string]*FieldInfo),
@@ -62,26 +62,26 @@ func (a *Analyzer) Analyze(structType reflect.Type) (*StructMetadata, error) {
 		Positional:  make([]*FieldInfo, 0),
 		Environment: make(map[string]*FieldInfo),
 	}
-	
+
 	for i := 0; i < structType.NumField(); i++ {
 		field := structType.Field(i)
-		
+
 		// Skip unexported fields
 		if !field.IsExported() {
 			continue
 		}
-		
+
 		fieldInfo, err := a.parseField(field)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing field %s: %w", field.Name, err)
 		}
-		
+
 		if fieldInfo == nil {
 			continue // Skip fields without tags
 		}
-		
+
 		metadata.Fields = append(metadata.Fields, *fieldInfo)
-		
+
 		// Build lookup maps
 		if fieldInfo.Positional {
 			metadata.Positional = append(metadata.Positional, fieldInfo)
@@ -94,12 +94,12 @@ func (a *Analyzer) Analyze(structType reflect.Type) (*StructMetadata, error) {
 				metadata.ShortMap[fieldInfo.Short] = fieldInfo
 			}
 		}
-		
+
 		if fieldInfo.Environment != "" {
 			metadata.Environment[fieldInfo.Environment] = fieldInfo
 		}
 	}
-	
+
 	return metadata, nil
 }
 
@@ -109,31 +109,31 @@ func (a *Analyzer) parseField(field reflect.StructField) (*FieldInfo, error) {
 	if tag == "" || tag == "-" {
 		return nil, nil // Skip fields without tags
 	}
-	
+
 	info := &FieldInfo{
 		Name: field.Name,
 		Type: field.Type,
 		Long: strings.ToLower(field.Name), // Default long name
 	}
-	
+
 	// Parse tag: "short,long,description,flags"
 	parts := strings.Split(tag, ",")
-	
+
 	// Short flag
 	if len(parts) > 0 && parts[0] != "" {
 		info.Short = parts[0]
 	}
-	
+
 	// Long flag
 	if len(parts) > 1 && parts[1] != "" {
 		info.Long = parts[1]
 	}
-	
+
 	// Description
 	if len(parts) > 2 {
 		info.Description = parts[2]
 	}
-	
+
 	// Flags
 	if len(parts) > 3 {
 		flagStr := parts[3]
@@ -141,22 +141,22 @@ func (a *Analyzer) parseField(field reflect.StructField) (*FieldInfo, error) {
 			return nil, err
 		}
 	}
-	
+
 	// Validate field configuration
 	if err := a.validateField(info); err != nil {
 		return nil, err
 	}
-	
+
 	return info, nil
 }
 
 // parseFlags parses the flags portion of the tag
 func (a *Analyzer) parseFlags(info *FieldInfo, flagStr string) error {
 	flags := strings.Split(flagStr, "|")
-	
+
 	for _, flag := range flags {
 		flag = strings.TrimSpace(flag)
-		
+
 		switch {
 		case flag == "required":
 			info.Required = true
@@ -175,7 +175,7 @@ func (a *Analyzer) parseFlags(info *FieldInfo, flagStr string) error {
 			return fmt.Errorf("unknown flag: %s", flag)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -185,12 +185,12 @@ func (a *Analyzer) validateField(info *FieldInfo) error {
 	if info.Positional && (info.Short != "" || info.Long != strings.ToLower(info.Name)) {
 		return fmt.Errorf("positional field %s cannot have short/long flags", info.Name)
 	}
-	
+
 	// Required validation
 	if info.Required && info.Default != "" {
 		return fmt.Errorf("field %s cannot be both required and have a default", info.Name)
 	}
-	
+
 	// Type-specific validation
 	switch info.Type.Kind() {
 	case reflect.Bool:
@@ -202,7 +202,7 @@ func (a *Analyzer) validateField(info *FieldInfo) error {
 			return fmt.Errorf("slice field %s must be positional", info.Name)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -224,15 +224,15 @@ func (b *Binder) BindValues(target any, values map[string]any, positional []stri
 	if targetValue.Kind() != reflect.Ptr || targetValue.Elem().Kind() != reflect.Struct {
 		return fmt.Errorf("target must be a pointer to struct")
 	}
-	
+
 	targetStruct := targetValue.Elem()
 	targetType := targetStruct.Type()
-	
+
 	metadata, err := b.analyzer.Analyze(targetType)
 	if err != nil {
 		return err
 	}
-	
+
 	// Set flag values
 	for flagName, value := range values {
 		// Try to find by long name first
@@ -244,28 +244,28 @@ func (b *Binder) BindValues(target any, values map[string]any, positional []stri
 				exists = true
 			}
 		}
-		
+
 		if !exists {
 			continue // Skip unknown flags
 		}
-		
+
 		field := targetStruct.FieldByName(fieldInfo.Name)
 		if !field.IsValid() || !field.CanSet() {
 			continue
 		}
-		
+
 		if err := b.setValue(field, fieldInfo.Type, value); err != nil {
 			return fmt.Errorf("error setting field %s: %w", fieldInfo.Name, err)
 		}
 	}
-	
+
 	// Set positional values
 	for i, fieldInfo := range metadata.Positional {
 		field := targetStruct.FieldByName(fieldInfo.Name)
 		if !field.IsValid() || !field.CanSet() {
 			continue
 		}
-		
+
 		// Handle slice types (remaining arguments)
 		if fieldInfo.Type.Kind() == reflect.Slice {
 			remaining := positional[i:]
@@ -274,7 +274,7 @@ func (b *Binder) BindValues(target any, values map[string]any, positional []stri
 			}
 			break
 		}
-		
+
 		// Handle single positional argument
 		if i < len(positional) {
 			if err := b.setValue(field, fieldInfo.Type, positional[i]); err != nil {
@@ -282,12 +282,12 @@ func (b *Binder) BindValues(target any, values map[string]any, positional []stri
 			}
 		}
 	}
-	
+
 	// Apply defaults
 	if err := b.applyDefaults(targetStruct, metadata); err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -298,7 +298,7 @@ func (b *Binder) setValue(field reflect.Value, fieldType reflect.Type, value any
 	if err != nil {
 		return err
 	}
-	
+
 	field.Set(reflect.ValueOf(convertedValue))
 	return nil
 }
@@ -307,7 +307,7 @@ func (b *Binder) setValue(field reflect.Value, fieldType reflect.Type, value any
 func (b *Binder) setSliceValue(field reflect.Value, fieldType reflect.Type, values []string) error {
 	elemType := fieldType.Elem()
 	slice := reflect.MakeSlice(fieldType, len(values), len(values))
-	
+
 	for i, value := range values {
 		convertedValue, err := b.convertValue(value, elemType)
 		if err != nil {
@@ -315,7 +315,7 @@ func (b *Binder) setSliceValue(field reflect.Value, fieldType reflect.Type, valu
 		}
 		slice.Index(i).Set(reflect.ValueOf(convertedValue))
 	}
-	
+
 	field.Set(slice)
 	return nil
 }
@@ -327,18 +327,18 @@ func (b *Binder) convertValue(value any, targetType reflect.Type) (any, error) {
 	if valueType == targetType {
 		return value, nil
 	}
-	
+
 	// Convert string values
 	if valueType.Kind() == reflect.String {
 		return b.convertFromString(value.(string), targetType)
 	}
-	
+
 	// Try direct conversion
 	valueReflect := reflect.ValueOf(value)
 	if valueReflect.Type().ConvertibleTo(targetType) {
 		return valueReflect.Convert(targetType).Interface(), nil
 	}
-	
+
 	return nil, fmt.Errorf("cannot convert %T to %s", value, targetType)
 }
 
@@ -393,24 +393,24 @@ func (b *Binder) applyDefaults(targetStruct reflect.Value, metadata *StructMetad
 		if fieldInfo.Default == "" {
 			continue
 		}
-		
+
 		field := targetStruct.FieldByName(fieldInfo.Name)
 		if !field.IsValid() || !field.CanSet() {
 			continue
 		}
-		
+
 		// Only apply default if field is zero value
 		if !field.IsZero() {
 			continue
 		}
-		
+
 		defaultValue, err := b.convertFromString(fieldInfo.Default, fieldInfo.Type)
 		if err != nil {
 			return fmt.Errorf("invalid default value for field %s: %w", fieldInfo.Name, err)
 		}
-		
+
 		field.Set(reflect.ValueOf(defaultValue))
 	}
-	
+
 	return nil
 }

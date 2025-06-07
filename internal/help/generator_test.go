@@ -38,7 +38,7 @@ func TestNewGenerator(t *testing.T) {
 			want:   true, // Should use default config
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			generator := NewGenerator(tt.config)
@@ -83,30 +83,30 @@ func TestDefaultHelpConfig(t *testing.T) {
 			wantColor:   true,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config := DefaultHelpConfig(tt.programName)
 			if config == nil {
 				t.Fatal("DefaultHelpConfig returned nil")
 			}
-			
+
 			if config.ProgramName != tt.wantName {
 				t.Errorf("Expected program name '%s', got '%s'", tt.wantName, config.ProgramName)
 			}
-			
+
 			if config.Version != tt.wantVersion {
 				t.Errorf("Expected version '%s', got '%s'", tt.wantVersion, config.Version)
 			}
-			
+
 			if config.MaxWidth != tt.wantWidth {
 				t.Errorf("Expected max width %d, got %d", tt.wantWidth, config.MaxWidth)
 			}
-			
+
 			if config.ColorEnabled != tt.wantColor {
 				t.Errorf("Expected ColorEnabled %v, got %v", tt.wantColor, config.ColorEnabled)
 			}
-			
+
 			if config.UsageTemplate == "" {
 				t.Error("Expected non-empty UsageTemplate")
 			}
@@ -160,16 +160,16 @@ func TestGenerateMainHelp(t *testing.T) {
 			want:     []string{"For more information, visit https://example.com"},
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			generator := NewGenerator(tt.config)
 			result := generator.GenerateMainHelp(tt.commands)
-			
+
 			if result == "" {
 				t.Error("GenerateMainHelp returned empty string")
 			}
-			
+
 			for _, want := range tt.want {
 				if !strings.Contains(result, want) {
 					t.Errorf("GenerateMainHelp() output missing '%s'\nFull output:\n%s", want, result)
@@ -227,17 +227,17 @@ func TestGenerateCommandHelp(t *testing.T) {
 			wantErr: true,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			generator := NewGenerator(tt.config)
 			result, err := generator.GenerateCommandHelp(tt.cmdName, tt.cmdInfo)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GenerateCommandHelp() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			
+
 			if !tt.wantErr {
 				for _, want := range tt.want {
 					if !strings.Contains(result, want) {
@@ -251,7 +251,7 @@ func TestGenerateCommandHelp(t *testing.T) {
 
 func TestGetTypeString(t *testing.T) {
 	tests := []struct {
-		name string
+		name  string
 		type_ reflect.Type
 		want  string
 	}{
@@ -264,7 +264,7 @@ func TestGetTypeString(t *testing.T) {
 		{"[]string", reflect.TypeOf([]string{}), "[]string"},
 		{"[]int", reflect.TypeOf([]int{}), "[]int"},
 	}
-	
+
 	generator := NewGenerator(nil)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -315,12 +315,12 @@ func TestFormatFlag(t *testing.T) {
 			want: []string{"--format", "(default: json)", "(choices: json, yaml, text)"},
 		},
 	}
-	
+
 	generator := NewGenerator(nil)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := generator.FormatFlag(tt.flag)
-			
+
 			for _, want := range tt.want {
 				if !strings.Contains(result, want) {
 					t.Errorf("FormatFlag() output missing '%s'\nFull output: %s", want, result)
@@ -337,26 +337,26 @@ func TestBuildUsage(t *testing.T) {
 		ProgramName:   "test-app",
 		UsageTemplate: "{{.Usage}}",
 	})
-	
+
 	cmdInfo := CommandInfo{
 		Name:       "deploy",
 		ConfigType: reflect.TypeOf(TestConfig{}),
 	}
-	
+
 	result, err := generator.GenerateCommandHelp("deploy", cmdInfo)
 	if err != nil {
 		t.Fatalf("GenerateCommandHelp() error = %v", err)
 	}
-	
+
 	// Should contain program name, command name, options, and positional args
 	expected := []string{
 		"test-app",
 		"deploy",
 		"[options]",
-		"<FILE>", // Required positional
+		"<FILE>",     // Required positional
 		"[OPTIONAL]", // Optional positional
 	}
-	
+
 	for _, want := range expected {
 		if !strings.Contains(result, want) {
 			t.Errorf("Usage missing '%s'\nFull output: %s", want, result)
@@ -372,23 +372,23 @@ func TestHelpConfig_Validation(t *testing.T) {
 		ColorEnabled: true,
 		MaxWidth:     120,
 	}
-	
+
 	if config.ProgramName != "test-app" {
 		t.Errorf("Expected program name 'test-app', got '%s'", config.ProgramName)
 	}
-	
+
 	if config.Version != "1.0.0" {
 		t.Errorf("Expected version '1.0.0', got '%s'", config.Version)
 	}
-	
+
 	if config.Description != "Test application" {
 		t.Errorf("Expected description 'Test application', got '%s'", config.Description)
 	}
-	
+
 	if !config.ColorEnabled {
 		t.Error("Expected ColorEnabled to be true")
 	}
-	
+
 	if config.MaxWidth != 120 {
 		t.Errorf("Expected MaxWidth 120, got %d", config.MaxWidth)
 	}
@@ -398,7 +398,7 @@ func TestDefaultUsageTemplateSections(t *testing.T) {
 	if DefaultUsageTemplate == "" {
 		t.Error("DefaultUsageTemplate should not be empty")
 	}
-	
+
 	// Check that template contains expected sections (actual conditional sections)
 	expectedSections := []string{
 		"{{.Description}}",
@@ -407,7 +407,7 @@ func TestDefaultUsageTemplateSections(t *testing.T) {
 		"{{- if .Positional}}",
 		"{{- if .Examples}}",
 	}
-	
+
 	for _, section := range expectedSections {
 		if !strings.Contains(DefaultUsageTemplate, section) {
 			t.Errorf("DefaultUsageTemplate missing section: %s", section)

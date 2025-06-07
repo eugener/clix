@@ -46,23 +46,23 @@ func (g *Generator) Complete(args []string, cursorPos int) ([]CompletionItem, er
 	if len(args) == 0 {
 		return g.completeCommands(""), nil
 	}
-	
+
 	// If we're completing the first argument, complete commands
 	if len(args) == 1 {
 		return g.completeCommands(args[0]), nil
 	}
-	
+
 	// Otherwise, complete for the specific command
 	commandName := args[0]
 	commandArgs := args[1:]
-	
+
 	return g.completeForCommand(commandName, commandArgs, cursorPos)
 }
 
 // completeCommands returns command completions
 func (g *Generator) completeCommands(prefix string) []CompletionItem {
 	var items []CompletionItem
-	
+
 	for name, desc := range g.registry.ListCommands() {
 		if strings.HasPrefix(name, prefix) {
 			items = append(items, CompletionItem{
@@ -72,7 +72,7 @@ func (g *Generator) completeCommands(prefix string) []CompletionItem {
 			})
 		}
 	}
-	
+
 	return items
 }
 
@@ -82,19 +82,19 @@ func (g *Generator) completeForCommand(commandName string, args []string, cursor
 	if !exists {
 		return nil, fmt.Errorf("unknown command: %s", commandName)
 	}
-	
+
 	// Analyze the command's config struct
 	metadata, err := g.analyzer.Analyze(descriptor.GetConfigType())
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Parse existing arguments to understand context
 	context, err := g.parseArgsContext(args, metadata)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Determine what we're completing
 	return g.determineCompletions(context, metadata)
 }
@@ -114,22 +114,22 @@ func (g *Generator) parseArgsContext(args []string, metadata *bind.StructMetadat
 		ParsedFlags:   make(map[string]bool),
 		PositionalPos: 0,
 	}
-	
+
 	if len(args) == 0 {
 		return context, nil
 	}
-	
+
 	i := 0
 	for i < len(args) {
 		arg := args[i]
-		
+
 		// Check if this is the last argument (what we're completing)
 		if i == len(args)-1 {
 			context.LastArg = arg
-			
+
 			if strings.HasPrefix(arg, "-") {
 				context.IsFlag = true
-				
+
 				// Check if this flag needs a value
 				flagName := g.extractFlagName(arg)
 				if fieldInfo := g.findFlagField(flagName, metadata); fieldInfo != nil {
@@ -140,12 +140,12 @@ func (g *Generator) parseArgsContext(args []string, metadata *bind.StructMetadat
 			}
 			break
 		}
-		
+
 		// Handle flags
 		if strings.HasPrefix(arg, "-") {
 			flagName := g.extractFlagName(arg)
 			context.ParsedFlags[flagName] = true
-			
+
 			// Check if this flag has a value
 			if fieldInfo := g.findFlagField(flagName, metadata); fieldInfo != nil {
 				if fieldInfo.Type.Kind() != reflect.Bool {
@@ -156,57 +156,57 @@ func (g *Generator) parseArgsContext(args []string, metadata *bind.StructMetadat
 			// Positional argument
 			context.PositionalPos++
 		}
-		
+
 		i++
 	}
-	
+
 	return context, nil
 }
 
 // determineCompletions determines what completions to offer
 func (g *Generator) determineCompletions(context *ArgContext, metadata *bind.StructMetadata) ([]CompletionItem, error) {
 	var items []CompletionItem
-	
+
 	// If we need a value for a flag, complete that
 	if context.NeedsValue != nil {
 		return g.completeForFieldType(context.NeedsValue), nil
 	}
-	
+
 	// If the last arg is a partial flag, complete flags
 	if context.IsFlag {
 		return g.completeFlags(context.LastArg, context.ParsedFlags, metadata), nil
 	}
-	
+
 	// Otherwise, offer both flags and positional completions
-	
+
 	// Add available flags
 	flagItems := g.completeFlags("", context.ParsedFlags, metadata)
 	items = append(items, flagItems...)
-	
+
 	// Add positional completions if we have positional fields
 	if context.PositionalPos < len(metadata.Positional) {
 		fieldInfo := metadata.Positional[context.PositionalPos]
 		positionalItems := g.completeForFieldType(fieldInfo)
 		items = append(items, positionalItems...)
 	}
-	
+
 	return items, nil
 }
 
 // completeFlags generates flag completions
 func (g *Generator) completeFlags(prefix string, usedFlags map[string]bool, metadata *bind.StructMetadata) []CompletionItem {
 	var items []CompletionItem
-	
+
 	for _, fieldInfo := range metadata.Fields {
 		if fieldInfo.Positional || fieldInfo.Hidden {
 			continue
 		}
-		
+
 		// Skip already used flags
 		if usedFlags[fieldInfo.Long] || (fieldInfo.Short != "" && usedFlags[fieldInfo.Short]) {
 			continue
 		}
-		
+
 		// Long flag
 		longFlag := "--" + fieldInfo.Long
 		if strings.HasPrefix(longFlag, prefix) {
@@ -220,7 +220,7 @@ func (g *Generator) completeFlags(prefix string, usedFlags map[string]bool, meta
 				Type:        CompletionFlags,
 			})
 		}
-		
+
 		// Short flag
 		if fieldInfo.Short != "" {
 			shortFlag := "-" + fieldInfo.Short
@@ -233,14 +233,14 @@ func (g *Generator) completeFlags(prefix string, usedFlags map[string]bool, meta
 			}
 		}
 	}
-	
+
 	return items
 }
 
 // completeForFieldType generates completions based on field type
 func (g *Generator) completeForFieldType(fieldInfo *bind.FieldInfo) []CompletionItem {
 	var items []CompletionItem
-	
+
 	// If field has choices, use them
 	if len(fieldInfo.Choices) > 0 {
 		for _, choice := range fieldInfo.Choices {
@@ -252,11 +252,11 @@ func (g *Generator) completeForFieldType(fieldInfo *bind.FieldInfo) []Completion
 		}
 		return items
 	}
-	
+
 	// Type-specific completions
 	switch fieldInfo.Type.Kind() {
 	case reflect.Bool:
-		items = append(items, 
+		items = append(items,
 			CompletionItem{Value: "true", Type: CompletionValues},
 			CompletionItem{Value: "false", Type: CompletionValues},
 		)
@@ -273,7 +273,7 @@ func (g *Generator) completeForFieldType(fieldInfo *bind.FieldInfo) []Completion
 			Type:  CompletionValues,
 		})
 	}
-	
+
 	return items
 }
 
@@ -304,12 +304,12 @@ func (g *Generator) findFlagField(flagName string, metadata *bind.StructMetadata
 	if fieldInfo, exists := metadata.FieldMap[flagName]; exists {
 		return fieldInfo
 	}
-	
+
 	// Try short name
 	if fieldInfo, exists := metadata.ShortMap[flagName]; exists {
 		return fieldInfo
 	}
-	
+
 	return nil
 }
 
@@ -331,7 +331,7 @@ _%s_completions() {
     fi
 }
 
-complete -F _%s_completions %s`, 
+complete -F _%s_completions %s`,
 		programName, programName, programName, programName, programName)
 }
 
@@ -365,7 +365,7 @@ function __%s_complete
     %s __complete $tokens 2>/dev/null
 end
 
-complete -c %s -f -a "(__%s_complete)"`, 
+complete -c %s -f -a "(__%s_complete)"`,
 		programName, programName, programName, programName, programName)
 }
 
@@ -387,7 +387,7 @@ func (ch *CompletionHandler) Handle(args []string) {
 	if err != nil {
 		return // Silent failure for completions
 	}
-	
+
 	// Output completions in a simple format
 	for _, item := range items {
 		fmt.Println(item.Value)

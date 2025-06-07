@@ -48,7 +48,7 @@ func TestExecutor_ConfigMergingErrors(t *testing.T) {
 
 func TestExecutor_EnvironmentVariableBinding(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	// Command with environment variable support
 	envCmd := NewCommand("env", "Environment test", func(ctx context.Context, config TestConfigWithEnv) error {
 		return nil
@@ -69,7 +69,7 @@ func TestExecutor_EnvironmentVariableBinding(t *testing.T) {
 
 func TestExecutor_ChoicesValidation(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	choicesCmd := NewCommand("choices", "Choices validation test", func(ctx context.Context, config TestConfigWithChoices) error {
 		return nil
 	})
@@ -114,7 +114,7 @@ func TestExecutor_ReflectionErrors(t *testing.T) {
 		name:       "invalid",
 		desc:       "Invalid command",
 		configType: reflect.TypeOf(42), // Invalid type (not a struct)
-		instance: &struct{
+		instance: &struct {
 			name string
 			desc string
 		}{
@@ -133,7 +133,7 @@ func TestExecutor_ReflectionErrors(t *testing.T) {
 
 func TestExecutor_BindingErrors(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	// Command with complex binding requirements
 	complexCmd := NewCommand("complex", "Complex binding test", func(ctx context.Context, config ComplexTestConfig) error {
 		return nil
@@ -157,7 +157,7 @@ func TestExecutor_BindingErrors(t *testing.T) {
 
 func TestExecutor_DefaultValueApplication(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	defaultsCmd := NewCommand("defaults", "Defaults test", func(ctx context.Context, config TestConfigWithDefaults) error {
 		// Verify defaults were applied
 		if config.DefaultField != "default-value" {
@@ -220,7 +220,7 @@ func TestExecutor_MiddlewareErrorHandling(t *testing.T) {
 
 func TestExecutor_ContextCancellation(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	// Command that checks for context cancellation
 	cancelCmd := NewCommand("cancel", "Cancellation test", func(ctx context.Context, config ErrorTestConfig) error {
 		select {
@@ -313,7 +313,7 @@ func TestExecutor_BuildMiddlewareChainEdgeCases(t *testing.T) {
 
 func TestExecutor_ValidationWithComplexTypes(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	complexValidationCmd := NewCommand("complex-validation", "Complex validation test", func(ctx context.Context, config ComplexValidationConfig) error {
 		return nil
 	})

@@ -102,7 +102,7 @@ func TestExecutor_LoggingMiddleware(t *testing.T) {
 
 func TestExecutor_TimeoutMiddleware(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	// Command that takes longer than timeout
 	slowCmd := NewCommand("slow", "Slow command", func(ctx context.Context, config MiddlewareTestConfig) error {
 		select {
@@ -140,7 +140,7 @@ func TestExecutor_TimeoutMiddleware(t *testing.T) {
 
 func TestExecutor_RecoveryMiddleware(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	// Command that panics
 	panicCmd := NewCommand("panic", "Panic command", func(ctx context.Context, config MiddlewareTestConfig) error {
 		panic("test panic")
@@ -162,7 +162,7 @@ func TestExecutor_RecoveryMiddleware(t *testing.T) {
 
 func TestExecutor_CombinedMiddleware(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	// Test with multiple middleware working together
 	cmd := NewCommand("test", "Test command", func(ctx context.Context, config MiddlewareTestConfig) error {
 		// Small delay to test timeout behavior
@@ -174,7 +174,7 @@ func TestExecutor_CombinedMiddleware(t *testing.T) {
 	executor := NewExecutor(registry)
 	executor.Use(
 		LoggingMiddleware,
-		TimeoutMiddleware(100 * time.Millisecond),
+		TimeoutMiddleware(100*time.Millisecond),
 		RecoveryMiddleware,
 	)
 
@@ -186,7 +186,7 @@ func TestExecutor_CombinedMiddleware(t *testing.T) {
 
 func TestExecutor_ErrorPropagation(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	errorCmd := NewCommand("error", "Error command", func(ctx context.Context, config MiddlewareTestConfig) error {
 		return fmt.Errorf("command error")
 	})
@@ -231,7 +231,7 @@ func TestExecutor_ErrorPropagation(t *testing.T) {
 
 func TestExecutor_ContextPropagation(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	var receivedContext *ExecutionContext
 	contextCmd := NewCommand("context", "Context command", func(ctx context.Context, config MiddlewareTestConfig) error {
 		// This tests that context is properly propagated through executor
@@ -308,7 +308,7 @@ func TestExecutor_NonExistentCommand(t *testing.T) {
 
 func TestExecutor_ValidationErrors(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	// Command with required field
 	cmd := NewCommand("required", "Required field command", func(ctx context.Context, config TestConfigWithRequired) error {
 		return nil
@@ -330,7 +330,7 @@ func TestExecutor_ValidationErrors(t *testing.T) {
 
 func TestExecutor_ParseErrors(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	// Command with required field to test validation errors
 	cmd := NewCommand("parse", "Parse test command", func(ctx context.Context, config TestConfigWithRequired) error {
 		return nil
@@ -353,7 +353,7 @@ func TestExecutor_ParseErrors(t *testing.T) {
 
 func TestExecutor_ConfigMerging(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	cmd := NewCommand("merge", "Config merge command", func(ctx context.Context, config MiddlewareTestConfig) error {
 		// Verify config values are properly merged
 		if config.Value != "cli-value" {

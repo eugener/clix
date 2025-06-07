@@ -60,28 +60,28 @@ func TestExecutor_ExecuteCommand_Success(t *testing.T) {
 	registry := NewRegistry()
 	executor := NewExecutor(registry)
 	cmd := &ExecutorTestCommand{}
-	
+
 	// Register the command
 	err := registry.Register(cmd)
 	if err != nil {
 		t.Fatalf("Failed to register command: %v", err)
 	}
-	
+
 	args := []string{"--name", "testvalue", "--count", "5"}
 	err = executor.Execute(context.Background(), "test", args)
-	
+
 	if err != nil {
 		t.Errorf("ExecuteCommand failed: %v", err)
 	}
-	
+
 	if !cmd.executed {
 		t.Error("Command was not executed")
 	}
-	
+
 	if cmd.config.Name != "testvalue" {
 		t.Errorf("Expected Name 'testvalue', got '%s'", cmd.config.Name)
 	}
-	
+
 	if cmd.config.Count != 5 {
 		t.Errorf("Expected Count 5, got %d", cmd.config.Count)
 	}
@@ -91,20 +91,20 @@ func TestExecutor_ExecuteCommand_Error(t *testing.T) {
 	registry := NewRegistry()
 	executor := NewExecutor(registry)
 	cmd := &ExecutorErrorCommand{}
-	
+
 	// Register the command
 	err := registry.Register(cmd)
 	if err != nil {
 		t.Fatalf("Failed to register command: %v", err)
 	}
-	
+
 	args := []string{"--name", "testvalue"}
 	err = executor.Execute(context.Background(), "test", args)
-	
+
 	if err == nil {
 		t.Error("Expected error from command execution")
 	}
-	
+
 	if err.Error() != "test error" {
 		t.Errorf("Expected error 'test error', got '%s'", err.Error())
 	}
@@ -114,17 +114,17 @@ func TestExecutor_ExecuteCommand_MissingRequired(t *testing.T) {
 	registry := NewRegistry()
 	executor := NewExecutor(registry)
 	cmd := &ExecutorTestCommand{}
-	
+
 	// Register the command
 	err := registry.Register(cmd)
 	if err != nil {
 		t.Fatalf("Failed to register command: %v", err)
 	}
-	
+
 	// Missing required --name flag
 	args := []string{"--count", "5"}
 	err = executor.Execute(context.Background(), "test", args)
-	
+
 	if err == nil {
 		t.Error("Expected error for missing required flag")
 	}
@@ -135,19 +135,19 @@ func TestExtractConfigType_ValidCommand(t *testing.T) {
 	cmd := NewCommand("test", "Test command", func(ctx context.Context, config ExecutorTestConfig) error {
 		return nil
 	})
-	
+
 	err := registry.Register(cmd)
 	if err != nil {
 		t.Errorf("Failed to register command: %v", err)
 		return
 	}
-	
+
 	descriptor, exists := registry.GetCommand("test")
 	if !exists {
 		t.Error("Command not found after registration")
 		return
 	}
-	
+
 	configType := descriptor.GetConfigType()
 	expectedType := reflect.TypeOf(ExecutorTestConfig{})
 	if configType != expectedType {
@@ -157,7 +157,7 @@ func TestExtractConfigType_ValidCommand(t *testing.T) {
 
 func TestExtractConfigType_NoRunMethod(t *testing.T) {
 	type InvalidCommand struct{}
-	
+
 	registry := NewRegistry()
 	err := registry.Register(&InvalidCommand{})
 	if err == nil {
@@ -191,32 +191,32 @@ func TestExecutor_ExecuteWithConfig(t *testing.T) {
 	registry := NewRegistry()
 	executor := NewExecutor(registry)
 	cmd := &ExecutorTestCommand{}
-	
+
 	// Register the command
 	err := registry.Register(cmd)
 	if err != nil {
 		t.Fatalf("Failed to register command: %v", err)
 	}
-	
+
 	config := ExecutorTestConfig{
 		Name:  "testvalue",
 		Count: 3,
 	}
-	
+
 	err = executor.ExecuteWithConfig(context.Background(), "test", []string{}, config)
-	
+
 	if err != nil {
 		t.Errorf("ExecuteWithConfig failed: %v", err)
 	}
-	
+
 	if !cmd.executed {
 		t.Error("Command was not executed")
 	}
-	
+
 	if cmd.config.Name != "testvalue" {
 		t.Errorf("Expected Name 'testvalue', got '%s'", cmd.config.Name)
 	}
-	
+
 	if cmd.config.Count != 3 {
 		t.Errorf("Expected Count 3, got %d", cmd.config.Count)
 	}

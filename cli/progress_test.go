@@ -58,15 +58,15 @@ func TestSpinnerWithOptions(t *testing.T) {
 
 func TestWithProgress(t *testing.T) {
 	var buf bytes.Buffer
-	
-	handler := WithProgress("Processing items", 5, func(config struct{}, pb *ProgressBar) error {
-		// Override writer for testing
-		pb = NewProgressBar("Processing items", 5, WithProgressWriter(&buf))
-		pb.Start()
-		defer pb.Finish()
-		
+
+	handler := WithProgress("Processing items", 5, func(config struct{}, _ *ProgressBar) error {
+		// Create new progress bar for testing with custom writer
+		testPb := NewProgressBar("Processing items", 5, WithProgressWriter(&buf))
+		testPb.Start()
+		defer testPb.Finish()
+
 		for i := 0; i < 5; i++ {
-			pb.Update(i + 1)
+			testPb.Update(i + 1)
 		}
 		return nil
 	})
@@ -79,13 +79,13 @@ func TestWithProgress(t *testing.T) {
 
 func TestWithSpinner(t *testing.T) {
 	var buf bytes.Buffer
-	
+
 	handler := WithSpinner("Loading data", func(config struct{}, spinner *Spinner) error {
 		// Override writer for testing
 		testSpinner := NewSpinner("Loading data", WithSpinnerWriter(&buf))
 		testSpinner.Start()
 		defer testSpinner.Stop()
-		
+
 		time.Sleep(50 * time.Millisecond)
 		return nil
 	})
@@ -99,7 +99,7 @@ func TestWithSpinner(t *testing.T) {
 func TestProgress(t *testing.T) {
 	var buf bytes.Buffer
 	pb, callback := Progress("Test", 10, WithProgressWriter(&buf))
-	
+
 	pb.Start()
 	callback(5, 10, "Halfway done")
 	pb.Finish()
@@ -113,7 +113,7 @@ func TestProgress(t *testing.T) {
 func TestProgressWithWriter(t *testing.T) {
 	var buf bytes.Buffer
 	pb := ProgressWithWriter(&buf, "Test", 10)
-	
+
 	pb.Start()
 	pb.Update(5)
 	pb.Finish()
@@ -130,7 +130,7 @@ func TestProgressWithWriter(t *testing.T) {
 func TestSpinnerWithWriter(t *testing.T) {
 	var buf bytes.Buffer
 	spinner := SpinnerWithWriter(&buf, "Loading")
-	
+
 	spinner.Start()
 	time.Sleep(100 * time.Millisecond)
 	spinner.Stop()
@@ -144,16 +144,16 @@ func TestSpinnerWithWriter(t *testing.T) {
 func TestDelayedSpinner(t *testing.T) {
 	var buf bytes.Buffer
 	delay := 50 * time.Millisecond
-	
+
 	spinner := DelayedSpinner("Slow operation", delay, WithSpinnerWriter(&buf))
 	spinner.Start()
-	
+
 	// Stop immediately - should not have started yet
 	spinner.Stop()
-	
+
 	// Wait for delay period to pass
 	time.Sleep(delay + 10*time.Millisecond)
-	
+
 	// Should have minimal output since it was stopped before delay
 	output := buf.String()
 	// The output might be empty or minimal since we stopped it quickly
@@ -163,15 +163,15 @@ func TestDelayedSpinner(t *testing.T) {
 func TestDelayedSpinnerWithDelay(t *testing.T) {
 	var buf bytes.Buffer
 	delay := 20 * time.Millisecond
-	
+
 	spinner := DelayedSpinner("Delayed operation", delay, WithSpinnerWriter(&buf))
 	spinner.Start()
-	
+
 	// Wait for delay + some animation time
 	time.Sleep(delay + 50*time.Millisecond)
-	
+
 	spinner.Stop()
-	
+
 	output := buf.String()
 	if !strings.Contains(output, "Delayed operation") {
 		t.Error("Delayed spinner should eventually show title")
@@ -181,7 +181,7 @@ func TestDelayedSpinnerWithDelay(t *testing.T) {
 func TestDelayedSpinnerUpdateTitle(t *testing.T) {
 	spinner := DelayedSpinner("Initial", 10*time.Millisecond)
 	spinner.UpdateTitle("Updated")
-	
+
 	// Should not crash and should update internal title
 	if spinner.title != "Updated" {
 		t.Error("DelayedSpinner should update title")
@@ -202,7 +202,7 @@ func TestPredefinedSpinnerStyles(t *testing.T) {
 		if len(style) == 0 {
 			t.Errorf("Predefined spinner style %d should not be empty", i)
 		}
-		
+
 		// Test that we can create a spinner with each style
 		var buf bytes.Buffer
 		spinner := NewSpinner("Test", WithSpinnerWriter(&buf), WithSpinnerFrames(style))
@@ -216,7 +216,7 @@ func TestSimpleProgress(t *testing.T) {
 	var buf bytes.Buffer
 	pb := NewProgressBar("Test", 10, WithProgressWriter(&buf))
 	callback := SimpleProgress(pb)
-	
+
 	pb.Start()
 	callback(3, 10, "Working...")
 	callback(7, 10, "Almost done...")
@@ -231,7 +231,7 @@ func TestSimpleProgress(t *testing.T) {
 func TestProgressBarUpdate(t *testing.T) {
 	var buf bytes.Buffer
 	pb := NewProgressBar("Test", 4, WithProgressWriter(&buf))
-	
+
 	tests := []struct {
 		update   int
 		expected string
@@ -241,7 +241,7 @@ func TestProgressBarUpdate(t *testing.T) {
 		{3, "75.0%"},
 		{4, "100.0%"},
 	}
-	
+
 	pb.Start()
 	for _, test := range tests {
 		buf.Reset()
@@ -256,19 +256,19 @@ func TestProgressBarUpdate(t *testing.T) {
 // Integration test for realistic usage
 func TestProgressBarIntegration(t *testing.T) {
 	var buf bytes.Buffer
-	
+
 	// Simulate a file processing operation
 	files := []string{"file1.txt", "file2.txt", "file3.txt", "file4.txt", "file5.txt"}
 	pb := NewProgressBar("Processing files", len(files), WithProgressWriter(&buf))
-	
+
 	pb.Start()
 	for i, file := range files {
 		// Simulate work
 		time.Sleep(1 * time.Millisecond)
-		
+
 		// Update progress
 		pb.Update(i + 1)
-		
+
 		// Verify progress shows correct percentage
 		if i == 2 { // 3/5 = 60%
 			output := buf.String()
@@ -276,12 +276,12 @@ func TestProgressBarIntegration(t *testing.T) {
 				t.Error("Progress should show 60% at 3/5 completion")
 			}
 		}
-		
+
 		_ = file // Use the variable to avoid unused variable warning
 	}
-	
+
 	pb.Finish()
-	
+
 	finalOutput := buf.String()
 	if !strings.Contains(finalOutput, "100.0%") {
 		t.Error("Final progress should show 100%")

@@ -56,39 +56,39 @@ const (
 
 // ErrorContext provides context for error formatting
 type ErrorContext struct {
-	Type            ErrorType
-	Command         string
-	Flag            string
-	Value           string
-	Suggestions     []string
-	AvailableItems  []string
-	RequiredFlags   []string
-	AllFlags        []string
-	AllCommands     []string
-	Examples        []string
-	HelpCommand     string
+	Type           ErrorType
+	Command        string
+	Flag           string
+	Value          string
+	Suggestions    []string
+	AvailableItems []string
+	RequiredFlags  []string
+	AllFlags       []string
+	AllCommands    []string
+	Examples       []string
+	HelpCommand    string
 }
 
 // formatUnknownCommand formats errors for unknown commands
 func (ef *ErrorFormatter) formatUnknownCommand(err error, context *ErrorContext) string {
 	var msg strings.Builder
-	
+
 	// Main error
 	msg.WriteString(ef.colorize(ColorRed, "❌ Unknown command: "))
 	msg.WriteString(ef.colorize(ColorBold, fmt.Sprintf("'%s'", context.Command)))
 	msg.WriteString("\n\n")
-	
+
 	// Suggestions
 	if len(context.Suggestions) > 0 {
 		msg.WriteString("💡 Did you mean:\n")
 		for _, suggestion := range context.Suggestions {
-			msg.WriteString(fmt.Sprintf("   %s %s\n", 
-				ef.colorize(ColorGreen, "→"), 
+			msg.WriteString(fmt.Sprintf("   %s %s\n",
+				ef.colorize(ColorGreen, "→"),
 				ef.colorize(ColorCyan, suggestion)))
 		}
 		msg.WriteString("\n")
 	}
-	
+
 	// Available commands
 	if len(context.AllCommands) > 0 {
 		msg.WriteString("📋 Available commands:\n")
@@ -97,34 +97,34 @@ func (ef *ErrorFormatter) formatUnknownCommand(err error, context *ErrorContext)
 		}
 		msg.WriteString("\n")
 	}
-	
+
 	// Help hint
-	msg.WriteString(fmt.Sprintf("💬 Use %s for more information\n", 
+	msg.WriteString(fmt.Sprintf("💬 Use %s for more information\n",
 		ef.colorize(ColorYellow, fmt.Sprintf("'%s help'", ef.programName))))
-	
+
 	return msg.String()
 }
 
 // formatUnknownFlag formats errors for unknown flags
 func (ef *ErrorFormatter) formatUnknownFlag(err error, context *ErrorContext) string {
 	var msg strings.Builder
-	
+
 	// Main error
 	msg.WriteString(ef.colorize(ColorRed, "❌ Unknown flag: "))
 	msg.WriteString(ef.colorize(ColorBold, context.Flag))
 	msg.WriteString("\n\n")
-	
+
 	// Suggestions
 	if len(context.Suggestions) > 0 {
 		msg.WriteString("💡 Did you mean:\n")
 		for _, suggestion := range context.Suggestions {
-			msg.WriteString(fmt.Sprintf("   %s %s\n", 
-				ef.colorize(ColorGreen, "→"), 
+			msg.WriteString(fmt.Sprintf("   %s %s\n",
+				ef.colorize(ColorGreen, "→"),
 				ef.colorize(ColorCyan, suggestion)))
 		}
 		msg.WriteString("\n")
 	}
-	
+
 	// Available flags
 	if len(context.AllFlags) > 0 {
 		msg.WriteString("🏳️  Available flags:\n")
@@ -134,25 +134,25 @@ func (ef *ErrorFormatter) formatUnknownFlag(err error, context *ErrorContext) st
 		}
 		msg.WriteString("\n")
 	}
-	
+
 	// Help hint
 	if context.Command != "" {
-		msg.WriteString(fmt.Sprintf("💬 Use %s for detailed usage\n", 
+		msg.WriteString(fmt.Sprintf("💬 Use %s for detailed usage\n",
 			ef.colorize(ColorYellow, fmt.Sprintf("'%s help %s'", ef.programName, context.Command))))
 	}
-	
+
 	return msg.String()
 }
 
 // formatMissingRequired formats errors for missing required fields
 func (ef *ErrorFormatter) formatMissingRequired(err error, context *ErrorContext) string {
 	var msg strings.Builder
-	
+
 	// Main error
 	msg.WriteString(ef.colorize(ColorRed, "❌ Missing required flag: "))
 	msg.WriteString(ef.colorize(ColorBold, context.Flag))
 	msg.WriteString("\n\n")
-	
+
 	// Show what's required
 	if len(context.RequiredFlags) > 0 {
 		msg.WriteString("🔴 Required flags:\n")
@@ -165,90 +165,90 @@ func (ef *ErrorFormatter) formatMissingRequired(err error, context *ErrorContext
 		}
 		msg.WriteString("\n")
 	}
-	
+
 	// Examples
 	if len(context.Examples) > 0 {
 		msg.WriteString("📝 Examples:\n")
 		for _, example := range context.Examples {
-			msg.WriteString(fmt.Sprintf("   %s %s\n", 
-				ef.colorize(ColorGreen, "$"), 
+			msg.WriteString(fmt.Sprintf("   %s %s\n",
+				ef.colorize(ColorGreen, "$"),
 				ef.colorize(ColorWhite, example)))
 		}
 		msg.WriteString("\n")
 	}
-	
+
 	// Help hint
 	if context.Command != "" {
-		msg.WriteString(fmt.Sprintf("💬 Use %s for detailed usage\n", 
+		msg.WriteString(fmt.Sprintf("💬 Use %s for detailed usage\n",
 			ef.colorize(ColorYellow, fmt.Sprintf("'%s help %s'", ef.programName, context.Command))))
 	}
-	
+
 	return msg.String()
 }
 
 // formatInvalidValue formats errors for invalid flag values
 func (ef *ErrorFormatter) formatInvalidValue(err error, context *ErrorContext) string {
 	var msg strings.Builder
-	
+
 	// Main error
 	msg.WriteString(ef.colorize(ColorRed, "❌ Invalid value for flag "))
 	msg.WriteString(ef.colorize(ColorBold, context.Flag))
 	msg.WriteString(": ")
 	msg.WriteString(ef.colorize(ColorBold, fmt.Sprintf("'%s'", context.Value)))
 	msg.WriteString("\n\n")
-	
+
 	// Valid options
 	if len(context.AvailableItems) > 0 {
 		msg.WriteString("✅ Valid options:\n")
 		for _, item := range context.AvailableItems {
-			msg.WriteString(fmt.Sprintf("   %s %s\n", 
-				ef.colorize(ColorGreen, "→"), 
+			msg.WriteString(fmt.Sprintf("   %s %s\n",
+				ef.colorize(ColorGreen, "→"),
 				ef.colorize(ColorCyan, item)))
 		}
 		msg.WriteString("\n")
 	}
-	
+
 	// Suggestions
 	if len(context.Suggestions) > 0 {
 		msg.WriteString("💡 Did you mean:\n")
 		for _, suggestion := range context.Suggestions {
-			msg.WriteString(fmt.Sprintf("   %s %s\n", 
-				ef.colorize(ColorGreen, "→"), 
+			msg.WriteString(fmt.Sprintf("   %s %s\n",
+				ef.colorize(ColorGreen, "→"),
 				ef.colorize(ColorCyan, suggestion)))
 		}
 		msg.WriteString("\n")
 	}
-	
+
 	return msg.String()
 }
 
 // formatValidationError formats validation errors
 func (ef *ErrorFormatter) formatValidationError(err error, context *ErrorContext) string {
 	var msg strings.Builder
-	
+
 	// Main error
 	msg.WriteString(ef.colorize(ColorRed, "❌ Validation failed: "))
 	msg.WriteString(err.Error())
 	msg.WriteString("\n\n")
-	
+
 	// Examples if available
 	if len(context.Examples) > 0 {
 		msg.WriteString("📝 Examples:\n")
 		for _, example := range context.Examples {
-			msg.WriteString(fmt.Sprintf("   %s %s\n", 
-				ef.colorize(ColorGreen, "$"), 
+			msg.WriteString(fmt.Sprintf("   %s %s\n",
+				ef.colorize(ColorGreen, "$"),
 				ef.colorize(ColorWhite, example)))
 		}
 		msg.WriteString("\n")
 	}
-	
+
 	return msg.String()
 }
 
 // formatBasicError formats basic errors without context
 func (ef *ErrorFormatter) formatBasicError(err error) string {
-	return fmt.Sprintf("%s %s\n", 
-		ef.colorize(ColorRed, "❌"), 
+	return fmt.Sprintf("%s %s\n",
+		ef.colorize(ColorRed, "❌"),
 		err.Error())
 }
 
@@ -301,28 +301,28 @@ func (se *SuggestionEngine) SuggestValues(input string, available []string) []st
 // suggest provides suggestions using Levenshtein distance
 func (se *SuggestionEngine) suggest(input string, available []string, maxDistance int) []string {
 	var suggestions []string
-	
+
 	input = strings.ToLower(input)
-	
+
 	for _, item := range available {
 		distance := se.levenshteinDistance(input, strings.ToLower(item))
 		if distance <= maxDistance && distance > 0 {
 			suggestions = append(suggestions, item)
 		}
 	}
-	
+
 	// Sort by distance (closest first)
 	sort.Slice(suggestions, func(i, j int) bool {
 		distI := se.levenshteinDistance(input, strings.ToLower(suggestions[i]))
 		distJ := se.levenshteinDistance(input, strings.ToLower(suggestions[j]))
 		return distI < distJ
 	})
-	
+
 	// Limit to 3 suggestions
 	if len(suggestions) > 3 {
 		suggestions = suggestions[:3]
 	}
-	
+
 	return suggestions
 }
 
@@ -334,13 +334,13 @@ func (se *SuggestionEngine) levenshteinDistance(s1, s2 string) int {
 	if len(s2) == 0 {
 		return len(s1)
 	}
-	
+
 	// Create matrix
 	matrix := make([][]int, len(s1)+1)
 	for i := range matrix {
 		matrix[i] = make([]int, len(s2)+1)
 	}
-	
+
 	// Initialize first row and column
 	for i := 0; i <= len(s1); i++ {
 		matrix[i][0] = i
@@ -348,7 +348,7 @@ func (se *SuggestionEngine) levenshteinDistance(s1, s2 string) int {
 	for j := 0; j <= len(s2); j++ {
 		matrix[0][j] = j
 	}
-	
+
 	// Fill matrix
 	for i := 1; i <= len(s1); i++ {
 		for j := 1; j <= len(s2); j++ {
@@ -356,7 +356,7 @@ func (se *SuggestionEngine) levenshteinDistance(s1, s2 string) int {
 			if s1[i-1] == s2[j-1] {
 				cost = 0
 			}
-			
+
 			matrix[i][j] = min(
 				matrix[i-1][j]+1,      // deletion
 				matrix[i][j-1]+1,      // insertion
@@ -364,7 +364,7 @@ func (se *SuggestionEngine) levenshteinDistance(s1, s2 string) int {
 			)
 		}
 	}
-	
+
 	return matrix[len(s1)][len(s2)]
 }
 

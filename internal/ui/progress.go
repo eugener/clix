@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -105,7 +106,7 @@ func (pb *ProgressBar) Finish() {
 		pb.current = pb.total
 		pb.finished = true
 		pb.render()
-		fmt.Fprintf(pb.writer, "\n")
+		_, _ = fmt.Fprintf(pb.writer, "\n")
 	}
 }
 
@@ -141,14 +142,14 @@ func (pb *ProgressBar) render() {
 	// Add elapsed time and ETA
 	elapsed := time.Since(pb.started)
 	if pb.current > 0 && !pb.finished {
-		eta := time.Duration(float64(elapsed) * (float64(pb.total) / float64(pb.current)) - float64(elapsed))
+		eta := time.Duration(float64(elapsed)*(float64(pb.total)/float64(pb.current)) - float64(elapsed))
 		parts = append(parts, fmt.Sprintf("ETA: %v", eta.Truncate(time.Second)))
 	} else if pb.finished {
 		parts = append(parts, fmt.Sprintf("Done in %v", elapsed.Truncate(time.Millisecond)))
 	}
 
 	// Render with carriage return to overwrite previous line
-	fmt.Fprintf(pb.writer, "\r%s", strings.Join(parts, " "))
+	_, _ = fmt.Fprintf(pb.writer, "\r%s", strings.Join(parts, " "))
 }
 
 // Spinner represents a spinning progress indicator
@@ -161,6 +162,7 @@ type Spinner struct {
 	started  time.Time
 	done     chan bool
 	finished bool
+	mu       sync.RWMutex
 }
 
 // SpinnerOption configures a spinner
@@ -214,16 +216,24 @@ func (s *Spinner) Start() {
 
 // Stop stops the spinner animation
 func (s *Spinner) Stop() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	
 	if !s.finished {
 		s.finished = true
-		s.done <- true
-		fmt.Fprintf(s.writer, "\r%s ✓ Done in %v\n", s.title, time.Since(s.started).Truncate(time.Millisecond))
+		select {
+		case s.done <- true:
+		default:
+		}
+		_, _ = fmt.Fprintf(s.writer, "\r%s ✓ Done in %v\n", s.title, time.Since(s.started).Truncate(time.Millisecond))
 	}
 }
 
 // UpdateTitle updates the spinner title
 func (s *Spinner) UpdateTitle(title string) {
+	s.mu.Lock()
 	s.title = title
+	s.mu.Unlock()
 }
 
 // animate runs the spinner animation loop
@@ -236,20 +246,22 @@ func (s *Spinner) animate() {
 		case <-s.done:
 			return
 		case <-ticker.C:
+			s.mu.Lock()
 			if !s.finished {
 				s.current = (s.current + 1) % len(s.frames)
-				fmt.Fprintf(s.writer, "\r%s %s", s.frames[s.current], s.title)
+				_, _ = fmt.Fprintf(s.writer, "\r%s %s", s.frames[s.current], s.title)
 			}
+			s.mu.Unlock()
 		}
 	}
 }
 
 // Predefined spinner styles
 var (
-	SpinnerDots     = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
-	SpinnerLine     = []string{"|", "/", "-", "\\"}
-	SpinnerArrows   = []string{"←", "↖", "↑", "↗", "→", "↘", "↓", "↙"}
-	SpinnerBounce   = []string{"⠁", "⠂", "⠄", "⠂"}
-	SpinnerCircle   = []string{"◐", "◓", "◑", "◒"}
-	SpinnerSquare   = []string{"◰", "◳", "◲", "◱"}
+	SpinnerDots   = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+	SpinnerLine   = []string{"|", "/", "-", "\\"}
+	SpinnerArrows = []string{"←", "↖", "↑", "↗", "→", "↘", "↓", "↙"}
+	SpinnerBounce = []string{"⠁", "⠂", "⠄", "⠂"}
+	SpinnerCircle = []string{"◐", "◓", "◑", "◒"}
+	SpinnerSquare = []string{"◰", "◳", "◲", "◱"}
 )

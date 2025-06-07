@@ -16,18 +16,18 @@ func TestNewErrorFormatter(t *testing.T) {
 		{"without color", "test-app", false},
 		{"empty program name", "", true},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			formatter := NewErrorFormatter(tt.programName, tt.useColor)
 			if formatter == nil {
 				t.Fatal("NewErrorFormatter returned nil")
 			}
-			
+
 			if formatter.programName != tt.programName {
 				t.Errorf("Expected program name '%s', got '%s'", tt.programName, formatter.programName)
 			}
-			
+
 			if formatter.useColor != tt.useColor {
 				t.Errorf("Expected useColor %v, got %v", tt.useColor, formatter.useColor)
 			}
@@ -37,7 +37,7 @@ func TestNewErrorFormatter(t *testing.T) {
 
 func TestErrorFormatter_FormatError(t *testing.T) {
 	formatter := NewErrorFormatter("test-app", false) // Disable colors for testing
-	
+
 	tests := []struct {
 		name    string
 		err     error
@@ -107,11 +107,11 @@ func TestErrorFormatter_FormatError(t *testing.T) {
 			want: []string{"❌ Validation failed:", "validation failed: email format invalid", "📝 Examples:", "user@example.com"},
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := formatter.FormatError(tt.err, tt.context)
-			
+
 			for _, want := range tt.want {
 				if !strings.Contains(result, want) {
 					t.Errorf("FormatError() output missing '%s'\nFull output:\n%s", want, result)
@@ -144,12 +144,12 @@ func TestErrorFormatter_Colorize(t *testing.T) {
 			want:     "error",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			formatter := NewErrorFormatter("test-app", tt.useColor)
 			result := formatter.colorize(tt.color, tt.text)
-			
+
 			if result != tt.want {
 				t.Errorf("colorize() = %q, want %q", result, tt.want)
 			}
@@ -166,7 +166,7 @@ func TestNewSuggestionEngine(t *testing.T) {
 
 func TestSuggestionEngine_SuggestCommands(t *testing.T) {
 	engine := NewSuggestionEngine()
-	
+
 	tests := []struct {
 		name      string
 		input     string
@@ -174,7 +174,7 @@ func TestSuggestionEngine_SuggestCommands(t *testing.T) {
 		want      []string
 	}{
 		{
-			name:      "single character difference", 
+			name:      "single character difference",
 			input:     "buil",
 			available: []string{"build", "test", "deploy"},
 			want:      []string{"build"},
@@ -204,15 +204,15 @@ func TestSuggestionEngine_SuggestCommands(t *testing.T) {
 			want:      []string{"deploy"},
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := engine.SuggestCommands(tt.input, tt.available)
-			
+
 			if len(result) != len(tt.want) {
 				t.Errorf("SuggestCommands() returned %d suggestions, want %d", len(result), len(tt.want))
 			}
-			
+
 			for i, want := range tt.want {
 				if i >= len(result) || result[i] != want {
 					t.Errorf("SuggestCommands() = %v, want %v", result, tt.want)
@@ -225,7 +225,7 @@ func TestSuggestionEngine_SuggestCommands(t *testing.T) {
 
 func TestSuggestionEngine_SuggestFlags(t *testing.T) {
 	engine := NewSuggestionEngine()
-	
+
 	tests := []struct {
 		name      string
 		input     string
@@ -245,15 +245,15 @@ func TestSuggestionEngine_SuggestFlags(t *testing.T) {
 			want:      []string{"-h", "-q"}, // exact match excluded
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := engine.SuggestFlags(tt.input, tt.available)
-			
+
 			if len(result) != len(tt.want) {
 				t.Errorf("SuggestFlags() returned %d suggestions, want %d", len(result), len(tt.want))
 			}
-			
+
 			for i, want := range tt.want {
 				if i >= len(result) || result[i] != want {
 					t.Errorf("SuggestFlags() = %v, want %v", result, tt.want)
@@ -266,7 +266,7 @@ func TestSuggestionEngine_SuggestFlags(t *testing.T) {
 
 func TestSuggestionEngine_SuggestValues(t *testing.T) {
 	engine := NewSuggestionEngine()
-	
+
 	tests := []struct {
 		name      string
 		input     string
@@ -286,15 +286,15 @@ func TestSuggestionEngine_SuggestValues(t *testing.T) {
 			want:      []string{},
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := engine.SuggestValues(tt.input, tt.available)
-			
+
 			if len(result) != len(tt.want) {
 				t.Errorf("SuggestValues() returned %d suggestions, want %d", len(result), len(tt.want))
 			}
-			
+
 			for i, want := range tt.want {
 				if i >= len(result) || result[i] != want {
 					t.Errorf("SuggestValues() = %v, want %v", result, tt.want)
@@ -307,7 +307,7 @@ func TestSuggestionEngine_SuggestValues(t *testing.T) {
 
 func TestSuggestionEngine_LevenshteinDistance(t *testing.T) {
 	engine := NewSuggestionEngine()
-	
+
 	tests := []struct {
 		name string
 		s1   string
@@ -323,7 +323,7 @@ func TestSuggestionEngine_LevenshteinDistance(t *testing.T) {
 		{"substitution", "hello", "hxllo", 1},
 		{"multiple operations", "kitten", "sitting", 3},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := engine.levenshteinDistance(tt.s1, tt.s2)
@@ -339,7 +339,7 @@ func TestNewErrorContext(t *testing.T) {
 	if builder == nil {
 		t.Fatal("NewErrorContext returned nil")
 	}
-	
+
 	if builder.context == nil {
 		t.Fatal("ErrorContextBuilder context is nil")
 	}
@@ -347,7 +347,7 @@ func TestNewErrorContext(t *testing.T) {
 
 func TestErrorContextBuilder(t *testing.T) {
 	builder := NewErrorContext()
-	
+
 	context := builder.
 		Type(ErrorTypeUnknownCommand).
 		Command("invalid-cmd").
@@ -360,43 +360,43 @@ func TestErrorContextBuilder(t *testing.T) {
 		RequiredFlags([]string{"--required"}).
 		Examples([]string{"example command"}).
 		Build()
-	
+
 	if context.Type != ErrorTypeUnknownCommand {
 		t.Errorf("Expected Type %v, got %v", ErrorTypeUnknownCommand, context.Type)
 	}
-	
+
 	if context.Command != "invalid-cmd" {
 		t.Errorf("Expected Command 'invalid-cmd', got '%s'", context.Command)
 	}
-	
+
 	if context.Flag != "--invalid" {
 		t.Errorf("Expected Flag '--invalid', got '%s'", context.Flag)
 	}
-	
+
 	if context.Value != "invalid-value" {
 		t.Errorf("Expected Value 'invalid-value', got '%s'", context.Value)
 	}
-	
+
 	if len(context.Suggestions) != 2 {
 		t.Errorf("Expected 2 suggestions, got %d", len(context.Suggestions))
 	}
-	
+
 	if len(context.AvailableItems) != 2 {
 		t.Errorf("Expected 2 available items, got %d", len(context.AvailableItems))
 	}
-	
+
 	if len(context.AllCommands) != 2 {
 		t.Errorf("Expected 2 commands, got %d", len(context.AllCommands))
 	}
-	
+
 	if len(context.AllFlags) != 2 {
 		t.Errorf("Expected 2 flags, got %d", len(context.AllFlags))
 	}
-	
+
 	if len(context.RequiredFlags) != 1 {
 		t.Errorf("Expected 1 required flag, got %d", len(context.RequiredFlags))
 	}
-	
+
 	if len(context.Examples) != 1 {
 		t.Errorf("Expected 1 example, got %d", len(context.Examples))
 	}
@@ -412,7 +412,7 @@ func TestErrorTypes(t *testing.T) {
 		ErrorTypeInvalidValue,
 		ErrorTypeValidation,
 	}
-	
+
 	for i, typeA := range types {
 		for j, typeB := range types {
 			if i != j && typeA == typeB {
@@ -434,7 +434,7 @@ func TestColorConstants(t *testing.T) {
 		"ColorWhite":  ColorWhite,
 		"ColorBold":   ColorBold,
 	}
-	
+
 	for name, color := range colors {
 		if string(color) == "" {
 			t.Errorf("Color %s is empty", name)
@@ -444,7 +444,7 @@ func TestColorConstants(t *testing.T) {
 
 func TestMinFunction(t *testing.T) {
 	tests := []struct {
-		name string
+		name    string
 		a, b, c int
 		want    int
 	}{
@@ -454,7 +454,7 @@ func TestMinFunction(t *testing.T) {
 		{"all equal", 5, 5, 5, 5},
 		{"negative numbers", -1, -2, -3, -3},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := min(tt.a, tt.b, tt.c)

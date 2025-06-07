@@ -10,7 +10,8 @@
       "Bash(ls:*)",
       "Bash(find:*)",
       "Bash(go test:*)",
-      "Bash(go vet:*)"
+      "Bash(go vet:*)",
+      "Bash(golangci-lint:*)"
     ],
     "deny": []
   }

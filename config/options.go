@@ -15,35 +15,35 @@ type CLIConfig struct {
 	Version     string
 	Description string
 	Author      string
-	
+
 	// Help configuration
 	HelpConfig *help.HelpConfig
-	
+
 	// Execution configuration
 	DefaultTimeout time.Duration
 	Logger         *slog.Logger
-	
+
 	// Middleware
 	Middleware []core.Middleware
-	
+
 	// Global flags
 	GlobalFlags map[string]interface{}
-	
+
 	// Configuration file settings
 	ConfigFile     string
 	ConfigPaths    []string
 	AutoLoadConfig bool
-	
+
 	// Interactive mode settings
 	InteractiveMode bool
-	
+
 	// Output formatting settings
-	OutputFormat     output.Format
-	OutputFormatter  *output.Formatter
-	
+	OutputFormat    output.Format
+	OutputFormatter *output.Formatter
+
 	// Error handling
 	ErrorHandler func(error) int
-	
+
 	// Hooks
 	BeforeAll  func(*core.ExecutionContext) error
 	AfterAll   func(*core.ExecutionContext) error
@@ -251,13 +251,13 @@ func WithOutputFormatter(formatter *output.Formatter) Option {
 // DefaultConfig returns a default CLI configuration
 func DefaultConfig() *CLIConfig {
 	return &CLIConfig{
-		Name:           "cli",
-		Version:        "1.0.0",
-		Description:    "",
-		DefaultTimeout: 30 * time.Second,
-		Logger:         slog.Default(),
-		Middleware:     []core.Middleware{},
-		GlobalFlags:    make(map[string]interface{}),
+		Name:            "cli",
+		Version:         "1.0.0",
+		Description:     "",
+		DefaultTimeout:  30 * time.Second,
+		Logger:          slog.Default(),
+		Middleware:      []core.Middleware{},
+		GlobalFlags:     make(map[string]interface{}),
 		ConfigFile:      "",
 		ConfigPaths:     []string{},
 		AutoLoadConfig:  false,
@@ -278,7 +278,7 @@ func (c *CLIConfig) Apply(opts ...Option) {
 	for _, opt := range opts {
 		opt(c)
 	}
-	
+
 	// Ensure help config is set
 	if c.HelpConfig == nil {
 		c.HelpConfig = help.DefaultHelpConfig(c.Name)

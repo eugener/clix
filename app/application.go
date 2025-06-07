@@ -16,40 +16,40 @@ import (
 
 // Application represents a complete CLI application
 type Application struct {
-	config       *config.CLIConfig
-	registry     *core.Registry
-	executor     *core.Executor
-	helpGen      *help.Generator
-	errorFormat  *help.ErrorFormatter
-	suggestions  *help.SuggestionEngine
-	prompter     *interactive.SmartPrompter
+	config      *config.CLIConfig
+	registry    *core.Registry
+	executor    *core.Executor
+	helpGen     *help.Generator
+	errorFormat *help.ErrorFormatter
+	suggestions *help.SuggestionEngine
+	prompter    *interactive.SmartPrompter
 }
 
 // NewApplication creates a new CLI application with the given configuration
 func NewApplication(cfg *config.CLIConfig) *Application {
 	registry := core.NewRegistry()
 	executor := core.NewExecutor(registry)
-	
+
 	// Apply middleware from configuration
 	if len(cfg.Middleware) > 0 {
 		executor.Use(cfg.Middleware...)
 	}
-	
+
 	// Set logger if provided
 	if cfg.Logger != nil {
 		executor.SetLogger(cfg.Logger)
 	}
-	
+
 	// Create help generator
 	helpGen := help.NewGenerator(cfg.HelpConfig)
-	
+
 	// Create error formatter and suggestion engine
 	errorFormat := help.NewErrorFormatter(cfg.Name, cfg.HelpConfig.ColorEnabled)
 	suggestions := help.NewSuggestionEngine()
-	
+
 	// Create interactive prompter
 	prompter := interactive.NewSmartPrompter()
-	
+
 	return &Application{
 		config:      cfg,
 		registry:    registry,
@@ -93,7 +93,7 @@ func (app *Application) Run(ctx context.Context, args []string) int {
 			return app.config.ErrorHandler(err)
 		}
 	}
-	
+
 	defer func() {
 		// Apply after all hook
 		if app.config.AfterAll != nil {
@@ -103,37 +103,37 @@ func (app *Application) Run(ctx context.Context, args []string) int {
 			}
 		}
 	}()
-	
+
 	// Handle no arguments - show main help
 	if len(args) == 0 {
 		app.showMainHelp()
 		return 0
 	}
-	
+
 	// Handle global help requests
 	if app.isHelpRequest(args[0]) {
 		return app.handleHelp(args)
 	}
-	
+
 	// Check if command exists before proceeding
 	commandName := args[0]
 	if _, exists := app.registry.GetCommand(commandName); !exists {
 		// Unknown command error with suggestions
 		allCommands := app.getAllCommandNames()
 		suggestions := app.suggestions.SuggestCommands(commandName, allCommands)
-		
+
 		errorCtx := help.NewErrorContext().
 			Type(help.ErrorTypeUnknownCommand).
 			Command(commandName).
 			Suggestions(suggestions).
 			AllCommands(allCommands).
 			Build()
-		
+
 		formattedError := app.errorFormat.FormatError(fmt.Errorf("unknown command"), errorCtx)
 		fmt.Fprint(os.Stderr, formattedError)
 		return 1
 	}
-	
+
 	// Handle version request
 	if app.isVersionRequest(args[0]) {
 		fmt.Printf("%s version %s\n", app.config.Name, app.config.Version)
@@ -142,10 +142,10 @@ func (app *Application) Run(ctx context.Context, args []string) int {
 		}
 		return 0
 	}
-	
-	// Execute command  
+
+	// Execute command
 	commandArgs := args[1:]
-	
+
 	// Apply before each hook
 	if app.config.BeforeEach != nil {
 		execCtx := core.NewExecutionContext(ctx, commandName, commandArgs)
@@ -154,7 +154,7 @@ func (app *Application) Run(ctx context.Context, args []string) int {
 			return app.config.ErrorHandler(err)
 		}
 	}
-	
+
 	defer func() {
 		// Apply after each hook
 		if app.config.AfterEach != nil {
@@ -164,7 +164,7 @@ func (app *Application) Run(ctx context.Context, args []string) int {
 			}
 		}
 	}()
-	
+
 	// Load configuration file if enabled
 	var baseConfig any
 	if app.config.AutoLoadConfig {
@@ -175,7 +175,7 @@ func (app *Application) Run(ctx context.Context, args []string) int {
 			baseConfig = config
 		}
 	}
-	
+
 	// Execute the command with base config
 	if err := app.executor.ExecuteWithConfig(ctx, commandName, commandArgs, baseConfig); err != nil {
 		// Check if this is a missing required field error and interactive mode is enabled
@@ -187,14 +187,14 @@ func (app *Application) Run(ctx context.Context, args []string) int {
 				}
 			}
 		}
-		
+
 		// Enhanced error formatting
 		errorCtx := app.buildErrorContext(err, commandName, commandArgs)
 		formattedError := app.errorFormat.FormatError(err, errorCtx)
 		fmt.Fprint(os.Stderr, formattedError)
 		return app.config.ErrorHandler(err)
 	}
-	
+
 	return 0
 }
 
@@ -280,12 +280,12 @@ func (app *Application) GetHelpGenerator() *help.Generator {
 // buildErrorContext builds error context for better error messages
 func (app *Application) buildErrorContext(err error, commandName string, args []string) *help.ErrorContext {
 	errorMsg := err.Error()
-	
+
 	// Detect error type from message
 	if strings.Contains(errorMsg, "unknown command") {
 		allCommands := app.getAllCommandNames()
 		suggestions := app.suggestions.SuggestCommands(commandName, allCommands)
-		
+
 		return help.NewErrorContext().
 			Type(help.ErrorTypeUnknownCommand).
 			Command(commandName).
@@ -293,13 +293,13 @@ func (app *Application) buildErrorContext(err error, commandName string, args []
 			AllCommands(allCommands).
 			Build()
 	}
-	
+
 	if strings.Contains(errorMsg, "unknown flag") {
 		// Extract flag from error message
 		flag := app.extractFlagFromError(errorMsg)
 		allFlags := app.getAllFlagsForCommand(commandName)
 		suggestions := app.suggestions.SuggestFlags(flag, allFlags)
-		
+
 		return help.NewErrorContext().
 			Type(help.ErrorTypeUnknownFlag).
 			Command(commandName).
@@ -308,13 +308,13 @@ func (app *Application) buildErrorContext(err error, commandName string, args []
 			AllFlags(allFlags).
 			Build()
 	}
-	
+
 	if strings.Contains(errorMsg, "required field") || strings.Contains(errorMsg, "missing") {
 		// Extract field from error message
 		field := app.extractFieldFromError(errorMsg)
 		requiredFlags := app.getRequiredFlagsForCommand(commandName)
 		examples := app.getExamplesForCommand(commandName)
-		
+
 		return help.NewErrorContext().
 			Type(help.ErrorTypeMissingRequired).
 			Command(commandName).
@@ -323,17 +323,17 @@ func (app *Application) buildErrorContext(err error, commandName string, args []
 			Examples(examples).
 			Build()
 	}
-	
+
 	if strings.Contains(errorMsg, "validation failed") {
 		examples := app.getExamplesForCommand(commandName)
-		
+
 		return help.NewErrorContext().
 			Type(help.ErrorTypeValidation).
 			Command(commandName).
 			Examples(examples).
 			Build()
 	}
-	
+
 	// Default to generic error
 	return help.NewErrorContext().
 		Type(help.ErrorTypeGeneric).
@@ -412,13 +412,13 @@ func (app *Application) loadConfigurationFile(commandName string, args []string)
 	if !exists {
 		return nil, nil // Command doesn't exist, skip config loading
 	}
-	
+
 	// Create config loader
 	configFileName := app.config.ConfigFile
 	if configFileName == "" {
 		configFileName = app.config.Name // Use app name as default
 	}
-	
+
 	searchPaths := app.config.ConfigPaths
 	if len(searchPaths) == 0 {
 		// Default search paths
@@ -428,19 +428,19 @@ func (app *Application) loadConfigurationFile(commandName string, args []string)
 			"/etc/" + app.config.Name,
 		}
 	}
-	
+
 	loader := configfile.NewLoader(configFileName, searchPaths...)
-	
+
 	// Create instance of config struct for this command
 	configType := descriptor.GetConfigType()
 	configPtr := reflect.New(configType)
 	config := configPtr.Interface()
-	
+
 	// Load configuration from file
 	if err := loader.Load(config); err != nil {
 		return nil, err
 	}
-	
+
 	// Return the loaded config for merging with CLI arguments
 	return config, nil
 }
@@ -451,10 +451,10 @@ func (app *Application) GenerateConfigFile(commandName string, format string) ([
 	if !exists {
 		return nil, fmt.Errorf("command %s not found", commandName)
 	}
-	
+
 	generator := configfile.NewConfigGenerator()
 	configType := descriptor.GetConfigType()
-	
+
 	switch strings.ToLower(format) {
 	case "yaml", "yml":
 		return generator.GenerateYAML(configType)
@@ -468,9 +468,9 @@ func (app *Application) GenerateConfigFile(commandName string, format string) ([
 // isMissingRequiredFieldError checks if error is about missing required fields
 func (app *Application) isMissingRequiredFieldError(err error) bool {
 	errorMsg := err.Error()
-	return strings.Contains(errorMsg, "required field") || 
-		   strings.Contains(errorMsg, "missing") ||
-		   strings.Contains(errorMsg, "validation failed")
+	return strings.Contains(errorMsg, "required field") ||
+		strings.Contains(errorMsg, "missing") ||
+		strings.Contains(errorMsg, "validation failed")
 }
 
 // handleInteractivePrompt handles interactive prompting for missing fields
@@ -480,12 +480,12 @@ func (app *Application) handleInteractivePrompt(ctx context.Context, commandName
 	if !exists {
 		return fmt.Errorf("command not found: %s", commandName)
 	}
-	
+
 	// Create instance of config struct for this command
 	configType := descriptor.GetConfigType()
 	configPtr := reflect.New(configType)
 	config := configPtr.Interface()
-	
+
 	// Load any existing configuration from files
 	if app.config.AutoLoadConfig {
 		if err := app.loadConfigIntoStruct(commandName, config); err != nil {
@@ -493,32 +493,32 @@ func (app *Application) handleInteractivePrompt(ctx context.Context, commandName
 			_ = err // explicitly ignore error
 		}
 	}
-	
+
 	// Parse existing command line arguments to get partial config
 	if err := app.parseArgsIntoStruct(commandName, args, config); err != nil {
 		// Non-fatal, continue with prompting - log or handle as needed
 		_ = err // explicitly ignore error
 	}
-	
+
 	// Show friendly message about interactive mode
 	fmt.Println()
 	fmt.Printf("🤖 Interactive mode enabled. I'll help you provide the missing information.\n")
 	fmt.Printf("   Press Ctrl+C to cancel at any time.\n")
 	fmt.Println()
-	
+
 	// Prompt for missing required fields
 	if err := app.prompter.PromptMissing(config); err != nil {
 		return fmt.Errorf("interactive prompting failed: %w", err)
 	}
-	
+
 	fmt.Println()
 	fmt.Printf("✅ All required information collected!\n")
 	fmt.Println()
-	
+
 	// Store the filled config somewhere the executor can access it
 	// This is a simplified approach - in practice, you'd need to integrate this
 	// more deeply with the argument parsing system
-	
+
 	return nil
 }
 
@@ -528,7 +528,7 @@ func (app *Application) loadConfigIntoStruct(commandName string, config any) err
 	if configFileName == "" {
 		configFileName = app.config.Name
 	}
-	
+
 	searchPaths := app.config.ConfigPaths
 	if len(searchPaths) == 0 {
 		searchPaths = []string{
@@ -537,7 +537,7 @@ func (app *Application) loadConfigIntoStruct(commandName string, config any) err
 			"/etc/" + app.config.Name,
 		}
 	}
-	
+
 	loader := configfile.NewLoader(configFileName, searchPaths...)
 	return loader.Load(config)
 }
@@ -559,13 +559,13 @@ func QuickApp(name, description string, commands ...any) *Application {
 		config.WithRecovery(),
 		config.WithLogging(),
 	)
-	
+
 	for _, cmd := range commands {
 		if err := app.Register(cmd); err != nil {
 			panic(fmt.Sprintf("Failed to register command: %v", err))
 		}
 	}
-	
+
 	return app
 }
 
@@ -576,15 +576,15 @@ func DevApp(name, description string, commands ...any) *Application {
 		config.WithName(name),
 		config.WithDescription(description),
 	)
-	
+
 	app := NewApplication(cfg)
-	
+
 	for _, cmd := range commands {
 		if err := app.Register(cmd); err != nil {
 			panic(fmt.Sprintf("Failed to register command: %v", err))
 		}
 	}
-	
+
 	return app
 }
 
@@ -595,14 +595,14 @@ func ProdApp(name, description string, commands ...any) *Application {
 		config.WithName(name),
 		config.WithDescription(description),
 	)
-	
+
 	app := NewApplication(cfg)
-	
+
 	for _, cmd := range commands {
 		if err := app.Register(cmd); err != nil {
 			panic(fmt.Sprintf("Failed to register command: %v", err))
 		}
 	}
-	
+
 	return app
 }

@@ -44,17 +44,17 @@ func TestNewRegistry(t *testing.T) {
 func TestRegistry_RegisterCommand(t *testing.T) {
 	registry := NewRegistry()
 	cmd := &RegistryTestCommand{}
-	
+
 	err := registry.Register(cmd)
 	if err != nil {
 		t.Fatalf("Register failed: %v", err)
 	}
-	
+
 	commands := registry.ListCommands()
 	if len(commands) != 1 {
 		t.Errorf("Expected 1 command, got %d", len(commands))
 	}
-	
+
 	registeredCmd, exists := registry.GetCommand("test")
 	if !exists {
 		t.Error("Command not found in registry")
@@ -71,12 +71,12 @@ func TestRegistry_RegisterCommand_Duplicate(t *testing.T) {
 	registry := NewRegistry()
 	cmd1 := &RegistryTestCommand{}
 	cmd2 := &RegistryTestCommand{}
-	
+
 	err := registry.Register(cmd1)
 	if err != nil {
 		t.Fatalf("First Register failed: %v", err)
 	}
-	
+
 	err = registry.Register(cmd2)
 	if err == nil {
 		t.Error("Expected error for duplicate command registration")
@@ -86,9 +86,9 @@ func TestRegistry_RegisterCommand_Duplicate(t *testing.T) {
 func TestRegistry_GetCommand(t *testing.T) {
 	registry := NewRegistry()
 	cmd := &RegistryTestCommand{}
-	
+
 	_ = registry.Register(cmd) // Error checked in other tests
-	
+
 	retrievedCmd, exists := registry.GetCommand("test")
 	if !exists {
 		t.Error("GetCommand returned false for existing command")
@@ -96,7 +96,7 @@ func TestRegistry_GetCommand(t *testing.T) {
 	if retrievedCmd.GetName() != "test" {
 		t.Errorf("Expected command name 'test', got '%s'", retrievedCmd.GetName())
 	}
-	
+
 	_, exists = registry.GetCommand("nonexistent")
 	if exists {
 		t.Error("GetCommand returned true for non-existent command")
@@ -111,20 +111,20 @@ func TestRegistry_ListCommands(t *testing.T) {
 	cmd2 := NewCommand("test2", "Test command 2", func(ctx context.Context, config RegistryTestConfig) error {
 		return nil
 	})
-	
+
 	_ = registry.Register(cmd1) // Error checked in other tests
 	_ = registry.Register(cmd2) // Error checked in other tests
-	
+
 	commands := registry.ListCommands()
 	if len(commands) != 2 {
 		t.Errorf("Expected 2 commands, got %d", len(commands))
 	}
-	
+
 	names := make([]string, 0, len(commands))
 	for _, cmd := range commands {
 		names = append(names, cmd.GetName())
 	}
-	
+
 	// Check both commands exist
 	found1, found2 := false, false
 	for _, name := range names {
@@ -147,14 +147,14 @@ func TestRegistry_Execute(t *testing.T) {
 		executed = true
 		return nil
 	})
-	
+
 	_ = registry.Register(cmd) // Error checked in other tests
-	
+
 	err := registry.Execute(context.Background(), "test", RegistryTestConfig{Value: "testvalue"})
 	if err != nil {
 		t.Errorf("Execute failed: %v", err)
 	}
-	
+
 	if !executed {
 		t.Error("Command was not executed")
 	}
@@ -162,12 +162,12 @@ func TestRegistry_Execute(t *testing.T) {
 
 func TestRegistry_Execute_NotFound(t *testing.T) {
 	registry := NewRegistry()
-	
+
 	err := registry.Execute(context.Background(), "nonexistent", RegistryTestConfig{})
 	if err == nil {
 		t.Error("Expected error for non-existent command")
 	}
-	
+
 	if !strings.Contains(err.Error(), "command not found") {
 		t.Errorf("Expected 'command not found' error, got: %v", err)
 	}
@@ -178,22 +178,22 @@ func TestCommandDescriptor_Methods(t *testing.T) {
 	cmd := NewCommand("test", "Test command", func(ctx context.Context, config RegistryTestConfig) error {
 		return nil
 	})
-	
+
 	_ = registry.Register(cmd) // Error checked in other tests
-	
+
 	descriptor, exists := registry.GetCommand("test")
 	if !exists {
 		t.Fatal("Command not found")
 	}
-	
+
 	if descriptor.GetName() != "test" {
 		t.Errorf("Expected name 'test', got '%s'", descriptor.GetName())
 	}
-	
+
 	if descriptor.GetDescription() != "Test command" {
 		t.Errorf("Expected description 'Test command', got '%s'", descriptor.GetDescription())
 	}
-	
+
 	configType := descriptor.GetConfigType()
 	expectedType := reflect.TypeOf(RegistryTestConfig{})
 	if configType != expectedType {

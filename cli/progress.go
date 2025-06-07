@@ -2,6 +2,7 @@ package cli
 
 import (
 	"io"
+	"sync"
 	"time"
 
 	"github.com/eugener/clix/internal/ui"
@@ -46,12 +47,12 @@ var (
 
 // Predefined spinner styles - re-exported for convenience
 var (
-	SpinnerDots     = ui.SpinnerDots
-	SpinnerLine     = ui.SpinnerLine
-	SpinnerArrows   = ui.SpinnerArrows
-	SpinnerBounce   = ui.SpinnerBounce
-	SpinnerCircle   = ui.SpinnerCircle
-	SpinnerSquare   = ui.SpinnerSquare
+	SpinnerDots   = ui.SpinnerDots
+	SpinnerLine   = ui.SpinnerLine
+	SpinnerArrows = ui.SpinnerArrows
+	SpinnerBounce = ui.SpinnerBounce
+	SpinnerCircle = ui.SpinnerCircle
+	SpinnerSquare = ui.SpinnerSquare
 )
 
 // ProgressCmd creates a command that automatically shows progress for long-running operations
@@ -114,7 +115,6 @@ func SimpleProgress(pb *ProgressBar) ProgressCallback {
 	}
 }
 
-
 // Progress creates a new progress bar and returns it along with a simple callback
 func Progress(title string, total int, opts ...ProgressBarOption) (*ProgressBar, ProgressCallback) {
 	pb := NewProgressBar(title, total, opts...)
@@ -150,12 +150,17 @@ type DelayedSpinnerWrapper struct {
 	spinner *Spinner
 	started time.Time
 	stopped bool
+	mu      sync.RWMutex
 }
 
 // Start begins the delayed spinner
 func (d *DelayedSpinnerWrapper) Start() {
 	go func() {
 		time.Sleep(d.delay)
+		
+		d.mu.Lock()
+		defer d.mu.Unlock()
+		
 		if !d.stopped && time.Since(d.started) >= d.delay {
 			d.spinner = NewSpinner(d.title, d.opts...)
 			d.spinner.Start()
@@ -165,6 +170,9 @@ func (d *DelayedSpinnerWrapper) Start() {
 
 // Stop stops the delayed spinner
 func (d *DelayedSpinnerWrapper) Stop() {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	
 	d.stopped = true
 	if d.spinner != nil {
 		d.spinner.Stop()
@@ -173,6 +181,9 @@ func (d *DelayedSpinnerWrapper) Stop() {
 
 // UpdateTitle updates the spinner title
 func (d *DelayedSpinnerWrapper) UpdateTitle(title string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	
 	d.title = title
 	if d.spinner != nil {
 		d.spinner.UpdateTitle(title)

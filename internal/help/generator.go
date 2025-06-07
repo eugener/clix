@@ -12,14 +12,14 @@ import (
 
 // HelpConfig configures help generation
 type HelpConfig struct {
-	ProgramName    string
-	Version        string
-	Description    string
-	UsageTemplate  string
-	ExamplesText   string
-	Footer         string
-	ColorEnabled   bool
-	MaxWidth       int
+	ProgramName   string
+	Version       string
+	Description   string
+	UsageTemplate string
+	ExamplesText  string
+	Footer        string
+	ColorEnabled  bool
+	MaxWidth      int
 }
 
 // DefaultHelpConfig returns a default help configuration
@@ -54,21 +54,21 @@ func NewGenerator(config *HelpConfig) *Generator {
 // GenerateMainHelp generates help for the main CLI
 func (g *Generator) GenerateMainHelp(commands map[string]CommandInfo) string {
 	var sb strings.Builder
-	
+
 	// Header
 	if g.config.Description != "" {
 		sb.WriteString(g.config.Description)
 		sb.WriteString("\n\n")
 	}
-	
+
 	// Usage
 	sb.WriteString("Usage:\n")
 	sb.WriteString(fmt.Sprintf("  %s <command> [options]\n\n", g.config.ProgramName))
-	
+
 	// Commands
 	if len(commands) > 0 {
 		sb.WriteString("Commands:\n")
-		
+
 		// Calculate max command name length for alignment
 		maxLen := 0
 		for name := range commands {
@@ -76,14 +76,14 @@ func (g *Generator) GenerateMainHelp(commands map[string]CommandInfo) string {
 				maxLen = len(name)
 			}
 		}
-		
+
 		// Sort commands alphabetically
 		names := make([]string, 0, len(commands))
 		for name := range commands {
 			names = append(names, name)
 		}
 		sort.Strings(names)
-		
+
 		// Format commands
 		for _, name := range names {
 			cmd := commands[name]
@@ -92,18 +92,18 @@ func (g *Generator) GenerateMainHelp(commands map[string]CommandInfo) string {
 		}
 		sb.WriteString("\n")
 	}
-	
+
 	// Global options (if any)
 	sb.WriteString("Global Options:\n")
 	sb.WriteString("  -h, --help     Show help\n")
 	sb.WriteString("  -v, --version  Show version\n\n")
-	
+
 	// Footer
 	if g.config.Footer != "" {
 		sb.WriteString(g.config.Footer)
 		sb.WriteString("\n")
 	}
-	
+
 	return sb.String()
 }
 
@@ -114,7 +114,7 @@ func (g *Generator) GenerateCommandHelp(name string, info CommandInfo) (string, 
 	if err != nil {
 		return "", fmt.Errorf("failed to analyze command config: %w", err)
 	}
-	
+
 	// Prepare template data
 	data := CommandHelpData{
 		ProgramName: g.config.ProgramName,
@@ -126,18 +126,18 @@ func (g *Generator) GenerateCommandHelp(name string, info CommandInfo) (string, 
 		Examples:    info.Examples,
 		MaxWidth:    g.config.MaxWidth,
 	}
-	
+
 	// Execute template
 	tmpl, err := template.New("command").Parse(g.config.UsageTemplate)
 	if err != nil {
 		return "", err
 	}
-	
+
 	var sb strings.Builder
 	if err := tmpl.Execute(&sb, data); err != nil {
 		return "", err
 	}
-	
+
 	return sb.String(), nil
 }
 
@@ -145,12 +145,12 @@ func (g *Generator) GenerateCommandHelp(name string, info CommandInfo) (string, 
 func (g *Generator) buildUsage(commandName string, metadata *bind.StructMetadata) string {
 	var parts []string
 	parts = append(parts, g.config.ProgramName, commandName)
-	
+
 	// Add flags placeholder
 	if len(metadata.FieldMap) > 0 {
 		parts = append(parts, "[options]")
 	}
-	
+
 	// Add positional arguments
 	for _, field := range metadata.Positional {
 		if field.Type.Kind() == reflect.Slice {
@@ -163,20 +163,20 @@ func (g *Generator) buildUsage(commandName string, metadata *bind.StructMetadata
 			}
 		}
 	}
-	
+
 	return strings.Join(parts, " ")
 }
 
 // buildFlagsHelp builds the flags help section
 func (g *Generator) buildFlagsHelp(metadata *bind.StructMetadata) []FlagHelp {
 	var flags []FlagHelp
-	
+
 	// Collect all flags
 	for _, field := range metadata.Fields {
 		if field.Positional || field.Hidden {
 			continue
 		}
-		
+
 		flag := FlagHelp{
 			Short:       field.Short,
 			Long:        field.Long,
@@ -186,22 +186,22 @@ func (g *Generator) buildFlagsHelp(metadata *bind.StructMetadata) []FlagHelp {
 			Default:     field.Default,
 			Choices:     field.Choices,
 		}
-		
+
 		flags = append(flags, flag)
 	}
-	
+
 	// Sort flags alphabetically by long name
 	sort.Slice(flags, func(i, j int) bool {
 		return flags[i].Long < flags[j].Long
 	})
-	
+
 	return flags
 }
 
 // buildPositionalHelp builds the positional arguments help section
 func (g *Generator) buildPositionalHelp(metadata *bind.StructMetadata) []PositionalHelp {
 	var positional []PositionalHelp
-	
+
 	for _, field := range metadata.Positional {
 		pos := PositionalHelp{
 			Name:        field.Name,
@@ -209,10 +209,10 @@ func (g *Generator) buildPositionalHelp(metadata *bind.StructMetadata) []Positio
 			Type:        g.getTypeString(field.Type),
 			Required:    field.Required,
 		}
-		
+
 		positional = append(positional, pos)
 	}
-	
+
 	return positional
 }
 
@@ -240,7 +240,7 @@ func (g *Generator) getTypeString(t reflect.Type) string {
 // FormatFlag formats a single flag for display
 func (g *Generator) FormatFlag(flag FlagHelp) string {
 	var parts []string
-	
+
 	// Build flag part
 	if flag.Short != "" && flag.Long != "" {
 		parts = append(parts, fmt.Sprintf("-%s, --%s", flag.Short, flag.Long))
@@ -249,41 +249,41 @@ func (g *Generator) FormatFlag(flag FlagHelp) string {
 	} else {
 		parts = append(parts, fmt.Sprintf("--%s", flag.Long))
 	}
-	
+
 	// Add type if not boolean
 	if flag.Type != "bool" {
 		parts = append(parts, fmt.Sprintf("<%s>", flag.Type))
 	}
-	
+
 	flagStr := strings.Join(parts, " ")
-	
+
 	// Build description part
 	var descParts []string
 	if flag.Description != "" {
 		descParts = append(descParts, flag.Description)
 	}
-	
+
 	if flag.Required {
 		descParts = append(descParts, "(required)")
 	}
-	
+
 	if flag.Default != "" {
 		descParts = append(descParts, fmt.Sprintf("(default: %s)", flag.Default))
 	}
-	
+
 	if len(flag.Choices) > 0 {
 		descParts = append(descParts, fmt.Sprintf("(choices: %s)", strings.Join(flag.Choices, ", ")))
 	}
-	
+
 	description := strings.Join(descParts, " ")
-	
+
 	// Calculate padding
 	const maxFlagWidth = 30
 	flagWidth := len(flagStr)
 	if flagWidth > maxFlagWidth {
 		return fmt.Sprintf("  %s\n%s%s", flagStr, strings.Repeat(" ", maxFlagWidth+2), description)
 	}
-	
+
 	padding := strings.Repeat(" ", maxFlagWidth-flagWidth)
 	return fmt.Sprintf("  %s%s  %s", flagStr, padding, description)
 }

@@ -30,7 +30,7 @@ func TestFormatAndOutput(t *testing.T) {
 	// Test different formats
 	formats := []output.Format{
 		"json",
-		"yaml", 
+		"yaml",
 		"table",
 		"text",
 	}
@@ -43,7 +43,7 @@ func TestFormatAndOutput(t *testing.T) {
 			if err != nil {
 				t.Errorf("FormatToWriter failed: %v", err)
 			}
-			
+
 			output := buf.String()
 			if output == "" {
 				t.Error("Expected non-empty output")
@@ -98,7 +98,7 @@ func TestSupportedFormats(t *testing.T) {
 	formats := SupportedFormats()
 	expectedFormats := []output.Format{
 		"json",
-		"yaml", 
+		"yaml",
 		"table",
 		"text",
 	}

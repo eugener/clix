@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-	
+
 	"github.com/eugener/clix/internal/bind"
 )
 
@@ -28,7 +28,7 @@ func TestNewValidator(t *testing.T) {
 	if validator == nil {
 		t.Fatal("NewValidator returned nil")
 	}
-	
+
 	if validator.analyzer == nil {
 		t.Error("Validator analyzer is nil")
 	}
@@ -59,7 +59,7 @@ func TestValidationError_Error(t *testing.T) {
 			want: "validation error for field choices: must be one of: a, b, c",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.ve.Error()
@@ -97,7 +97,7 @@ func TestValidationErrors_Error(t *testing.T) {
 			want: "multiple validation errors:",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.ves.Error()
@@ -110,7 +110,7 @@ func TestValidationErrors_Error(t *testing.T) {
 
 func TestValidator_Validate(t *testing.T) {
 	validator := NewValidator()
-	
+
 	tests := []struct {
 		name    string
 		config  any
@@ -166,16 +166,16 @@ func TestValidator_Validate(t *testing.T) {
 			errType: "struct",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validator.Validate(tt.config)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Validator.Validate() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			
+
 			if tt.wantErr && tt.errType != "" {
 				if !strings.Contains(err.Error(), tt.errType) {
 					t.Errorf("Validator.Validate() error = %v, expected to contain %v", err, tt.errType)
@@ -187,7 +187,7 @@ func TestValidator_Validate(t *testing.T) {
 
 func TestValidator_ValidateChoices(t *testing.T) {
 	validator := NewValidator()
-	
+
 	tests := []struct {
 		name      string
 		fieldInfo bind.FieldInfo
@@ -231,15 +231,15 @@ func TestValidator_ValidateChoices(t *testing.T) {
 			wantErr: false, // Should convert to string for comparison
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validator.validateChoices(tt.fieldInfo, tt.value)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateChoices() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			
+
 			if tt.wantErr {
 				var ve *ValidationError
 				if !errors.As(err, &ve) {
@@ -252,7 +252,7 @@ func TestValidator_ValidateChoices(t *testing.T) {
 
 func TestValidator_IsZeroValue(t *testing.T) {
 	validator := NewValidator()
-	
+
 	tests := []struct {
 		name  string
 		value any
@@ -268,12 +268,12 @@ func TestValidator_IsZeroValue(t *testing.T) {
 		{"empty slice", []string{}, false}, // Go considers empty slice as not zero
 		{"non-empty slice", []string{"item"}, false},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			value := reflect.ValueOf(tt.value)
 			result := validator.isZeroValue(value)
-			
+
 			if result != tt.want {
 				t.Errorf("isZeroValue() = %v, want %v", result, tt.want)
 			}
@@ -286,7 +286,7 @@ func TestNewValidatorRegistry(t *testing.T) {
 	if registry == nil {
 		t.Fatal("NewValidatorRegistry returned nil")
 	}
-	
+
 	if registry.validators == nil {
 		t.Error("Registry validators map is nil")
 	}
@@ -294,18 +294,18 @@ func TestNewValidatorRegistry(t *testing.T) {
 
 func TestValidatorRegistry_Register(t *testing.T) {
 	registry := NewValidatorRegistry()
-	
+
 	validator := func(value any) error {
 		return nil
 	}
-	
+
 	registry.Register("test", validator)
-	
+
 	retrieved, exists := registry.Get("test")
 	if !exists {
 		t.Error("Validator not found after registration")
 	}
-	
+
 	if retrieved == nil {
 		t.Error("Retrieved validator is nil")
 	}
@@ -313,24 +313,24 @@ func TestValidatorRegistry_Register(t *testing.T) {
 
 func TestValidatorRegistry_Get(t *testing.T) {
 	registry := NewValidatorRegistry()
-	
+
 	// Test getting non-existent validator
 	_, exists := registry.Get("nonexistent")
 	if exists {
 		t.Error("Expected validator to not exist")
 	}
-	
+
 	// Test getting existing validator
 	validator := func(value any) error {
 		return nil
 	}
 	registry.Register("existing", validator)
-	
+
 	retrieved, exists := registry.Get("existing")
 	if !exists {
 		t.Error("Expected validator to exist")
 	}
-	
+
 	if retrieved == nil {
 		t.Error("Retrieved validator should not be nil")
 	}
@@ -349,11 +349,11 @@ func TestEmailValidator(t *testing.T) {
 		{"non-string value", 123, true},
 		{"empty string", "", true},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := EmailValidator(tt.value)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("EmailValidator() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -374,11 +374,11 @@ func TestURLValidator(t *testing.T) {
 		{"non-string value", 123, true},
 		{"empty string", "", true},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := URLValidator(tt.value)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("URLValidator() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -388,7 +388,7 @@ func TestURLValidator(t *testing.T) {
 
 func TestRangeValidator(t *testing.T) {
 	validator := RangeValidator(0, 100)
-	
+
 	tests := []struct {
 		name    string
 		value   any
@@ -404,11 +404,11 @@ func TestRangeValidator(t *testing.T) {
 		{"boundary min", 0, false},
 		{"boundary max", 100, false},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validator(tt.value)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RangeValidator() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -418,7 +418,7 @@ func TestRangeValidator(t *testing.T) {
 
 func TestLengthValidator(t *testing.T) {
 	validator := LengthValidator(2, 10)
-	
+
 	tests := []struct {
 		name    string
 		value   any
@@ -431,11 +431,11 @@ func TestLengthValidator(t *testing.T) {
 		{"too long", "12345678901", true},
 		{"non-string value", 123, true},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validator(tt.value)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("LengthValidator() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -445,7 +445,7 @@ func TestLengthValidator(t *testing.T) {
 
 func TestPatternValidator(t *testing.T) {
 	validator := PatternValidator("alphanumeric")
-	
+
 	tests := []struct {
 		name    string
 		value   any
@@ -458,11 +458,11 @@ func TestPatternValidator(t *testing.T) {
 		{"invalid with spaces", "abc 123", true},
 		{"non-string value", 123, true},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validator(tt.value)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("PatternValidator() error = %v, wantErr %v", err, tt.wantErr)
 			}
