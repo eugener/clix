@@ -39,7 +39,7 @@ func TestEnhancedErrorMessages(t *testing.T) {
 
 	// The error should be caught and formatted by the app layer
 	if !strings.Contains(err.Error(), "command not found") {
-		t.Logf("Error message: %v", err)
+		t.Errorf("Expected error message to contain 'command not found', got: %v", err)
 	}
 }
 
