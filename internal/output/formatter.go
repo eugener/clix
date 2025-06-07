@@ -351,27 +351,54 @@ func (f *Formatter) structToRow(value reflect.Value, headers []string) map[strin
 
 // renderTableWithData renders the actual table with headers, rows, and calculated widths
 func (f *Formatter) renderTableWithData(headers []string, rows []map[string]string, widths map[string]int) error {
-	// Render header separator
-	var separatorParts []string
-	for _, header := range headers {
-		separatorParts = append(separatorParts, strings.Repeat("-", widths[header]))
-	}
-	separator := "+-" + strings.Join(separatorParts, "-+-") + "-+"
+	// Unicode box-drawing characters for better appearance
+	const (
+		topLeft     = "┌"
+		topRight    = "┐"
+		bottomLeft  = "└"
+		bottomRight = "┘"
+		horizontal  = "─"
+		vertical    = "│"
+		cross       = "┼"
+		topTee      = "┬"
+		bottomTee   = "┴"
+		leftTee     = "├"
+		rightTee    = "┤"
+	)
+
+	// Build separators with Unicode box-drawing characters
+	// Add 2 to each width to account for padding spaces around content
+	var topSeparatorParts []string
+	var midSeparatorParts []string
+	var bottomSeparatorParts []string
 	
-	// Render header
-	if _, err := fmt.Fprintln(f.writer, separator); err != nil {
+	for _, header := range headers {
+		line := strings.Repeat(horizontal, widths[header]+2) // +2 for padding spaces
+		topSeparatorParts = append(topSeparatorParts, line)
+		midSeparatorParts = append(midSeparatorParts, line)
+		bottomSeparatorParts = append(bottomSeparatorParts, line)
+	}
+	
+	topSeparator := topLeft + strings.Join(topSeparatorParts, topTee) + topRight
+	midSeparator := leftTee + strings.Join(midSeparatorParts, cross) + rightTee
+	bottomSeparator := bottomLeft + strings.Join(bottomSeparatorParts, bottomTee) + bottomRight
+	
+	// Render top border
+	if _, err := fmt.Fprintln(f.writer, topSeparator); err != nil {
 		return err
 	}
 	
+	// Render header
 	var headerParts []string
 	for _, header := range headers {
 		headerParts = append(headerParts, fmt.Sprintf("%-*s", widths[header], header))
 	}
-	if _, err := fmt.Fprintf(f.writer, "| %s |\n", strings.Join(headerParts, " | ")); err != nil {
+	if _, err := fmt.Fprintf(f.writer, "%s %s %s\n", vertical, strings.Join(headerParts, " "+vertical+" "), vertical); err != nil {
 		return err
 	}
 	
-	if _, err := fmt.Fprintln(f.writer, separator); err != nil {
+	// Render middle separator
+	if _, err := fmt.Fprintln(f.writer, midSeparator); err != nil {
 		return err
 	}
 	
@@ -382,12 +409,12 @@ func (f *Formatter) renderTableWithData(headers []string, rows []map[string]stri
 			content := row[header]
 			rowParts = append(rowParts, fmt.Sprintf("%-*s", widths[header], content))
 		}
-		if _, err := fmt.Fprintf(f.writer, "| %s |\n", strings.Join(rowParts, " | ")); err != nil {
+		if _, err := fmt.Fprintf(f.writer, "%s %s %s\n", vertical, strings.Join(rowParts, " "+vertical+" "), vertical); err != nil {
 			return err
 		}
 	}
 	
-	// Render bottom separator
-	_, err := fmt.Fprintln(f.writer, separator)
+	// Render bottom border
+	_, err := fmt.Fprintln(f.writer, bottomSeparator)
 	return err
 }

@@ -60,7 +60,7 @@ func TestFormatAndOutput(t *testing.T) {
 					t.Error("YAML output doesn't look like YAML")
 				}
 			case "table":
-				if !strings.Contains(output, "|") {
+				if !strings.Contains(output, "│") {
 					t.Error("Table output doesn't contain table separators")
 				}
 			case "text":

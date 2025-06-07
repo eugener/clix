@@ -178,22 +178,22 @@ func TestFormatter_FormatTable(t *testing.T) {
 				{Name: "Alice", Age: 30, City: "New York"},
 				{Name: "Bob", Age: 25, City: "SF"},
 			},
-			want: []string{"Name", "Age", "City", "Alice", "Bob", "30", "25", "New York", "SF", "|", "+", "-"},
+			want: []string{"Name", "Age", "City", "Alice", "Bob", "30", "25", "New York", "SF", "│", "┌", "─"},
 		},
 		{
 			name: "single struct",
 			data: Person{Name: "Alice", Age: 30, City: "New York"},
-			want: []string{"Field", "Value", "Name", "Alice", "Age", "30", "City", "New York", "|", "+", "-"},
+			want: []string{"Field", "Value", "Name", "Alice", "Age", "30", "City", "New York", "│", "┌", "─"},
 		},
 		{
 			name: "map",
 			data: map[string]string{"name": "test", "status": "active"},
-			want: []string{"Key", "Value", "name", "test", "status", "active", "|", "+", "-"},
+			want: []string{"Key", "Value", "name", "test", "status", "active", "│", "┌", "─"},
 		},
 		{
 			name: "slice of simple values",
 			data: []string{"apple", "banana", "cherry"},
-			want: []string{"Value", "apple", "banana", "cherry", "|", "+", "-"},
+			want: []string{"Value", "apple", "banana", "cherry", "│", "┌", "─"},
 		},
 	}
 	
