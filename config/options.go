@@ -6,6 +6,7 @@ import (
 
 	"github.com/eugener/clix/core"
 	"github.com/eugener/clix/internal/help"
+	"github.com/eugener/clix/internal/output"
 )
 
 // CLIConfig holds the configuration for a CLI application
@@ -35,6 +36,10 @@ type CLIConfig struct {
 	
 	// Interactive mode settings
 	InteractiveMode bool
+	
+	// Output formatting settings
+	OutputFormat     output.Format
+	OutputFormatter  *output.Formatter
 	
 	// Error handling
 	ErrorHandler func(error) int
@@ -229,6 +234,20 @@ func WithInteractiveMode(enabled bool) Option {
 	}
 }
 
+// WithOutputFormat sets the default output format for commands
+func WithOutputFormat(format output.Format) Option {
+	return func(c *CLIConfig) {
+		c.OutputFormat = format
+	}
+}
+
+// WithOutputFormatter sets a custom output formatter
+func WithOutputFormatter(formatter *output.Formatter) Option {
+	return func(c *CLIConfig) {
+		c.OutputFormatter = formatter
+	}
+}
+
 // DefaultConfig returns a default CLI configuration
 func DefaultConfig() *CLIConfig {
 	return &CLIConfig{
@@ -243,6 +262,8 @@ func DefaultConfig() *CLIConfig {
 		ConfigPaths:     []string{},
 		AutoLoadConfig:  false,
 		InteractiveMode: false,
+		OutputFormat:    output.FormatText,
+		OutputFormatter: nil,
 		ErrorHandler: func(err error) int {
 			if err != nil {
 				return 1

@@ -101,6 +101,7 @@ import (
 	"github.com/eugener/clix/app"
 	"github.com/eugener/clix/config"
 	"github.com/eugener/clix/core"
+	"github.com/eugener/clix/internal/output"
 )
 
 // App represents a CLI application builder with fluent API
@@ -250,6 +251,27 @@ func (a *App) BeforeEach(hook func(*core.ExecutionContext) error) *App {
 func (a *App) AfterEach(hook func(*core.ExecutionContext) error) *App {
 	a.options = append(a.options, config.WithAfterEach(hook))
 	return a
+}
+
+// OutputFormat sets the default output format for commands
+func (a *App) OutputFormat(format output.Format) *App {
+	a.options = append(a.options, config.WithOutputFormat(format))
+	return a
+}
+
+// JSONOutput sets JSON as the default output format
+func (a *App) JSONOutput() *App {
+	return a.OutputFormat(output.FormatJSON)
+}
+
+// YAMLOutput sets YAML as the default output format
+func (a *App) YAMLOutput() *App {
+	return a.OutputFormat(output.FormatYAML)
+}
+
+// TableOutput sets table as the default output format
+func (a *App) TableOutput() *App {
+	return a.OutputFormat(output.FormatTable)
 }
 
 // Build creates the underlying CLI application

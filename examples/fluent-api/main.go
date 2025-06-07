@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/eugener/clix/cli"
 	"github.com/eugener/clix/core"
@@ -15,6 +16,12 @@ import (
 type HelloConfig struct {
 	Name string `posix:"n,name,Your name,required"`
 	Age  int    `posix:"a,age,Your age"`
+}
+
+// Configuration for output formatting example
+type ListConfig struct {
+	cli.OutputConfig
+	Filter string `posix:"f,filter,Filter items"`
 }
 
 func main() {
@@ -57,6 +64,30 @@ func main() {
 			cli.Cmd("config", "Show configuration", func() error {
 				fmt.Println("📄 Configuration loaded from: fluent-api-demo.yaml")
 				return nil
+			}),
+
+			// Demonstrate structured output
+			core.NewCommand("list", "List items with structured output", func(ctx context.Context, config ListConfig) error {
+				// Sample data
+				items := []map[string]interface{}{
+					{"id": 1, "name": "Item 1", "category": "tools", "price": 29.99},
+					{"id": 2, "name": "Item 2", "category": "books", "price": 15.50},
+					{"id": 3, "name": "Item 3", "category": "tools", "price": 45.00},
+				}
+
+				// Filter if specified
+				if config.Filter != "" {
+					filtered := []map[string]interface{}{}
+					for _, item := range items {
+						if strings.Contains(item["category"].(string), config.Filter) {
+							filtered = append(filtered, item)
+						}
+					}
+					items = filtered
+				}
+
+				// Use the structured output formatter
+				return cli.FormatAndOutput(items, config.Format)
 			}),
 		).
 		AddCommand(cli.VersionCmd("2.0.0")).
