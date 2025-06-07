@@ -8,14 +8,13 @@ import (
 
 // Test config struct for testing
 type TestConfig struct {
-	Name     string   `short:"n" long:"name" description:"Name of the item" required:"true"`
-	Verbose  bool     `short:"v" long:"verbose" description:"Enable verbose output"`
-	Output   string   `short:"o" long:"output" description:"Output format" default:"text" choices:"text,json,yaml"`
-	Count    int      `short:"c" long:"count" description:"Number of items" default:"1"`
-	Tags     []string `long:"tag" description:"Tags to add"`
-	Hidden   string   `long:"hidden" description:"Hidden field" hidden:"true"`
-	File     string   `pos:"0" description:"Input file" required:"true"`
-	Optional string   `pos:"1" description:"Optional argument"`
+	Name     string `posix:"n,name,Name of the item,required"`
+	Verbose  bool   `posix:"v,verbose,Enable verbose output"`
+	Output   string `posix:"o,output,Output format,default=text|choices=text;json;yaml"`
+	Count    int    `posix:"c,count,Number of items,default=1"`
+	Hidden   string `posix:",hidden,Hidden field,hidden"`
+	File     string `posix:",file,Input file,positional|required"`
+	Optional string `posix:",optional,Optional argument,positional"`
 }
 
 func TestNewGenerator(t *testing.T) {
@@ -400,13 +399,13 @@ func TestDefaultUsageTemplateSections(t *testing.T) {
 		t.Error("DefaultUsageTemplate should not be empty")
 	}
 	
-	// Check that template contains expected sections
+	// Check that template contains expected sections (actual conditional sections)
 	expectedSections := []string{
 		"{{.Description}}",
 		"{{.Usage}}",
-		"{{.Flags}}",
-		"{{.Positional}}",
-		"{{.Examples}}",
+		"{{- if .Flags}}",
+		"{{- if .Positional}}",
+		"{{- if .Examples}}",
 	}
 	
 	for _, section := range expectedSections {

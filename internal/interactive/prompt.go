@@ -11,9 +11,16 @@ import (
 	"github.com/eugener/clix/internal/bind"
 )
 
+// Scanner interface for input scanning (allows mocking)
+type Scanner interface {
+	Scan() bool
+	Text() string
+	Err() error
+}
+
 // Prompter handles interactive prompting for missing values
 type Prompter struct {
-	scanner  *bufio.Scanner
+	scanner  Scanner
 	analyzer *bind.Analyzer
 }
 
@@ -291,7 +298,7 @@ func (p *Prompter) supportsColor() bool {
 
 // ConfirmPrompter provides confirmation prompts
 type ConfirmPrompter struct {
-	scanner *bufio.Scanner
+	scanner Scanner
 }
 
 // NewConfirmPrompter creates a new confirmation prompter
@@ -334,7 +341,7 @@ func (cp *ConfirmPrompter) Confirm(message string, defaultValue bool) (bool, err
 
 // SelectPrompter provides selection prompts
 type SelectPrompter struct {
-	scanner *bufio.Scanner
+	scanner Scanner
 }
 
 // NewSelectPrompter creates a new selection prompter
@@ -384,7 +391,7 @@ func (sp *SelectPrompter) Select(message string, options []string) (string, erro
 
 // MultilinePrompter handles multiline input
 type MultilinePrompter struct {
-	scanner *bufio.Scanner
+	scanner Scanner
 }
 
 // NewMultilinePrompter creates a new multiline prompter

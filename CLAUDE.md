@@ -8,6 +8,8 @@
 ### Current Coverage Status
 | Package              | Coverage | Status                      | Priority |
 |----------------------|----------|-----------------------------|----------|
+| **internal/help**    | 92.8%    | ✅ Excellent - help generation | Completed |
+| **internal/interactive** | 79.4% | ✅ Strong - prompting system | Completed |
 | **core**             | 70.9%    | ✅ Strong - execution engine | High     |
 | **internal/bind**    | 70.7%    | ✅ Strong - reflection binding | High   |
 | **cli**              | 55.7%    | ⚠️ Moderate - fluent API    | High     |
@@ -16,8 +18,6 @@
 | **internal/configfile** | 30.0% | ⚠️ Low - file loading       | Medium   |
 | **internal/posix**   | 22.9%    | ❌ Low - POSIX parsing      | Medium   |
 | **internal/complete** | 5.5%    | ❌ Very low - completion    | Low      |
-| **internal/help**    | 1.6%     | ❌ Very low - help generation | Low    |
-| **internal/interactive** | 2.9% | ❌ Very low - prompting     | Low      |
 
 ## 🏗️ Architecture Analysis
 

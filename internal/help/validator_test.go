@@ -11,17 +11,16 @@ import (
 
 // Test structs for validation testing
 type ValidTestConfig struct {
-	Name     string   `short:"n" long:"name" description:"Name of the item" required:"true"`
-	Verbose  bool     `short:"v" long:"verbose" description:"Enable verbose output"`
-	Output   string   `short:"o" long:"output" description:"Output format" default:"text" choices:"text,json,yaml"`
-	Count    int      `short:"c" long:"count" description:"Number of items" default:"1"`
-	Tags     []string `long:"tag" description:"Tags to add"`
-	Optional string   `long:"optional" description:"Optional field"`
+	Name     string `posix:"n,name,Name of the item,required"`
+	Verbose  bool   `posix:"v,verbose,Enable verbose output"`
+	Output   string `posix:"o,output,Output format,default=text|choices=text;json;yaml"`
+	Count    int    `posix:"c,count,Number of items,default=1"`
+	Optional string `posix:",optional,Optional field"`
 }
 
 type InvalidTestConfig struct {
-	RequiredField string `required:"true"`
-	ChoiceField   string `choices:"a,b,c"`
+	RequiredField string `posix:",requiredfield,Required field,required"`
+	ChoiceField   string `posix:",choicefield,Choice field,choices=a;b;c"`
 }
 
 func TestNewValidator(t *testing.T) {
@@ -125,7 +124,6 @@ func TestValidator_Validate(t *testing.T) {
 				Verbose:  true,
 				Output:   "json",
 				Count:    5,
-				Tags:     []string{"tag1", "tag2"},
 				Optional: "value",
 			},
 			wantErr: false,
@@ -153,7 +151,7 @@ func TestValidator_Validate(t *testing.T) {
 				Output: "xml", // Not in choices
 			},
 			wantErr: true,
-			errType: "choices",
+			errType: "must be one of",
 		},
 		{
 			name:    "non-struct config",
@@ -218,7 +216,7 @@ func TestValidator_ValidateChoices(t *testing.T) {
 			name: "no choices defined",
 			fieldInfo: bind.FieldInfo{
 				Name:    "format",
-				Choices: []string{},
+				Choices: nil, // Use nil instead of empty slice to properly test no choices
 			},
 			value:   "anything",
 			wantErr: false,

@@ -143,6 +143,11 @@ func (v *Validator) validateField(fieldInfo bind.FieldInfo, field reflect.Value)
 
 // validateChoices validates that a value is in the allowed choices
 func (v *Validator) validateChoices(fieldInfo bind.FieldInfo, value any) error {
+	// If no choices are defined, validation passes
+	if len(fieldInfo.Choices) == 0 {
+		return nil
+	}
+	
 	valueStr := fmt.Sprintf("%v", value)
 	
 	for _, choice := range fieldInfo.Choices {
