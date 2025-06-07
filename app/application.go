@@ -9,6 +9,7 @@ import (
 
 	"github.com/eugener/clix/config"
 	"github.com/eugener/clix/core"
+	"github.com/eugener/clix/internal/bind"
 	"github.com/eugener/clix/internal/configfile"
 	"github.com/eugener/clix/internal/help"
 	"github.com/eugener/clix/internal/interactive"
@@ -115,10 +116,20 @@ func (app *Application) Run(ctx context.Context, args []string) int {
 		return app.handleHelp(args)
 	}
 
-	// Check if command exists before proceeding
-	commandName := args[0]
-	if _, exists := app.registry.GetCommand(commandName); !exists {
-		// Unknown command error with suggestions
+	// Handle version request first (simple case)
+	if app.isVersionRequest(args[0]) {
+		fmt.Printf("%s version %s\n", app.config.Name, app.config.Version)
+		if app.config.Author != "" {
+			fmt.Printf("Author: %s\n", app.config.Author)
+		}
+		return 0
+	}
+
+	// Resolve the command path by separating commands from arguments
+	resolvedCmd, resolvedPath, commandArgs := app.resolveCommandPath(args)
+	if resolvedCmd == nil {
+		// Command resolution failed - unknown command
+		commandName := args[0]
 		allCommands := app.getAllCommandNames()
 		suggestions := app.suggestions.SuggestCommands(commandName, allCommands)
 
@@ -129,22 +140,51 @@ func (app *Application) Run(ctx context.Context, args []string) int {
 			AllCommands(allCommands).
 			Build()
 
-		formattedError := app.errorFormat.FormatError(fmt.Errorf("unknown command"), errorCtx)
+		formattedError := app.errorFormat.FormatError(fmt.Errorf("command not found: %s", commandName), errorCtx)
 		fmt.Fprint(os.Stderr, formattedError)
 		return 1
 	}
 
-	// Handle version request
-	if app.isVersionRequest(args[0]) {
-		fmt.Printf("%s version %s\n", app.config.Name, app.config.Version)
-		if app.config.Author != "" {
-			fmt.Printf("Author: %s\n", app.config.Author)
+	// Check if this is a help request for the resolved command
+	if len(commandArgs) > 0 && app.isHelpRequest(commandArgs[0]) {
+		if resolvedCmd.HasSubcommands() {
+			// Show parent command help
+			parentInfo := app.buildParentCommandInfo(resolvedCmd)
+			fmt.Print(app.helpGen.GenerateParentCommandHelp(parentInfo))
+			return 0
+		} else {
+			// Show command help
+			return app.handleCommandHelp(resolvedCmd, resolvedPath)
 		}
-		return 0
 	}
 
-	// Execute command
-	commandArgs := args[1:]
+	// Check if user is trying to execute a parent command directly (without subcommands)
+	// If so, show error but also provide helpful guidance
+	if resolvedCmd.HasSubcommands() && len(commandArgs) == 0 {
+		commandPath := strings.Join(resolvedPath, " ")
+		
+		// Create error context for proper formatting
+		errorCtx := help.NewErrorContext().
+			Type(help.ErrorTypeGeneric).
+			Command(commandPath).
+			Build()
+		
+		// Format the error with colors
+		errorMsg := fmt.Sprintf("command %s has subcommands and cannot be executed directly", commandPath)
+		formattedError := app.errorFormat.FormatError(fmt.Errorf(errorMsg), errorCtx)
+		
+		// Show formatted error
+		fmt.Fprint(os.Stderr, formattedError)
+		
+		// Add helpful guidance
+		parentInfo := app.buildParentCommandInfo(resolvedCmd)
+		helpText := app.helpGen.GenerateParentCommandHelp(parentInfo)
+		fmt.Fprint(os.Stderr, helpText)
+		return 1
+	}
+
+	// Construct command name from resolved path for execution
+	commandName := strings.Join(resolvedPath, " ")
 
 	// Apply before each hook
 	if app.config.BeforeEach != nil {
@@ -176,13 +216,13 @@ func (app *Application) Run(ctx context.Context, args []string) int {
 		}
 	}
 
-	// Execute the command with base config
-	if err := app.executor.ExecuteWithConfig(ctx, commandName, commandArgs, baseConfig); err != nil {
+	// Execute the resolved command directly
+	if err := app.executeResolvedCommand(ctx, resolvedCmd, commandName, commandArgs, baseConfig); err != nil {
 		// Check if this is a missing required field error and interactive mode is enabled
 		if app.config.InteractiveMode && app.isMissingRequiredFieldError(err) {
 			if interactiveErr := app.handleInteractivePrompt(ctx, commandName, commandArgs, err); interactiveErr == nil {
 				// Successfully prompted and got values, try again
-				if retryErr := app.executor.ExecuteWithConfig(ctx, commandName, commandArgs, baseConfig); retryErr == nil {
+				if retryErr := app.executeResolvedCommand(ctx, resolvedCmd, commandName, commandArgs, baseConfig); retryErr == nil {
 					return 0 // Success after interactive prompting
 				}
 			}
@@ -214,7 +254,46 @@ func (app *Application) showMainHelp() {
 			Aliases:     desc.GetAliases(),
 		}
 	}
-	fmt.Print(app.helpGen.GenerateMainHelp(commands))
+
+	parentCommands := make(map[string]help.ParentCommandInfo)
+	for name, cmd := range app.registry.ListCommands() {
+		if cmd.HasSubcommands() {
+			parentCommands[name] = app.buildParentCommandInfo(cmd)
+		}
+	}
+
+	fmt.Print(app.helpGen.GenerateMainHelpWithParentCommands(commands, parentCommands))
+}
+
+// buildParentCommandInfo recursively builds help information for a parent command
+func (app *Application) buildParentCommandInfo(cmd core.Command) help.ParentCommandInfo {
+	commands := make(map[string]help.CommandInfo)
+	parentCommands := make(map[string]help.ParentCommandInfo)
+	
+	// Get subcommands from the command
+	for name, subCmd := range cmd.ListSubcommands() {
+		if subCmd.HasSubcommands() {
+			// This is a nested command
+			parentCommands[name] = app.buildParentCommandInfo(subCmd)
+		} else {
+			// This is a regular command
+			commands[name] = help.CommandInfo{
+				Name:        subCmd.GetName(),
+				Description: subCmd.GetDescription(),
+				Aliases:     subCmd.GetAliases(),
+				ConfigType:  subCmd.GetConfigType(),
+			}
+		}
+	}
+
+	return help.ParentCommandInfo{
+		Name:        cmd.GetName(),
+		Description: cmd.GetDescription(),
+		Aliases:     cmd.GetAliases(),
+		Commands:    commands,
+		ParentCommands: parentCommands,
+		Path:        cmd.GetPath(),
+	}
 }
 
 // handleHelp handles help requests
@@ -257,6 +336,222 @@ func (app *Application) isHelpRequest(arg string) bool {
 // isVersionRequest checks if the argument is a version request
 func (app *Application) isVersionRequest(arg string) bool {
 	return arg == "version" || arg == "--version" || arg == "-v"
+}
+
+// handleParentCommandHelp handles help requests for parent commands
+func (app *Application) handleParentCommandHelp(parentName string) int {
+	if cmd, exists := app.registry.GetCommand(parentName); exists {
+		parentInfo := app.buildParentCommandInfo(cmd)
+		fmt.Print(app.helpGen.GenerateParentCommandHelp(parentInfo))
+		return 0
+	}
+	fmt.Fprintf(os.Stderr, "Unknown parent command: %s\n", parentName)
+	return 1
+}
+
+// handleCommandHelp handles help requests for specific commands
+func (app *Application) handleCommandHelp(cmd core.Command, path []string) int {
+	commandName := strings.Join(path, " ")
+	info := help.CommandInfo{
+		Name:        cmd.GetName(),
+		Description: cmd.GetDescription(),
+		ConfigType:  cmd.GetConfigType(),
+		Aliases:     cmd.GetAliases(),
+		Examples: []string{
+			fmt.Sprintf("%s %s [options]", app.config.Name, commandName),
+		},
+	}
+	helpText, err := app.helpGen.GenerateCommandHelp(commandName, info)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error generating help: %v\n", err)
+		return 1
+	}
+	fmt.Print(helpText)
+	return 0
+}
+
+// resolveCommandPath resolves the command path by separating commands from arguments
+// Returns the resolved command, the path that was resolved, and remaining arguments
+func (app *Application) resolveCommandPath(args []string) (core.Command, []string, []string) {
+	if len(args) == 0 {
+		return nil, nil, nil
+	}
+
+	// Start with the first argument as the top-level command
+	topLevelCmd, exists := app.registry.GetCommand(args[0])
+	if !exists {
+		return nil, nil, args
+	}
+
+	// If only one argument or it has no subcommands, return it
+	if len(args) == 1 || !topLevelCmd.HasSubcommands() {
+		return topLevelCmd, []string{args[0]}, args[1:]
+	}
+
+	// Try to resolve nested commands
+	currentCmd := topLevelCmd
+	resolvedPath := []string{args[0]}
+	
+	for i := 1; i < len(args); i++ {
+		arg := args[i]
+		
+		// If this looks like a flag or option, stop here
+		if strings.HasPrefix(arg, "-") {
+			return currentCmd, resolvedPath, args[i:]
+		}
+		
+		// Try to find this as a subcommand
+		if subCmd, exists := currentCmd.GetSubcommand(arg); exists {
+			currentCmd = subCmd
+			resolvedPath = append(resolvedPath, arg)
+		} else {
+			// Not a subcommand, so this and everything after are arguments
+			return currentCmd, resolvedPath, args[i:]
+		}
+	}
+
+	// All arguments were part of the command path
+	return currentCmd, resolvedPath, []string{}
+}
+
+// executeResolvedCommand executes a resolved command with configuration and middleware
+func (app *Application) executeResolvedCommand(ctx context.Context, cmd core.Command, commandName string, args []string, baseConfig any) error {
+	// Create execution context
+	execCtx := core.NewExecutionContext(ctx, commandName, args)
+
+	// Create config instance
+	configType := cmd.GetConfigType()
+	configPtr := reflect.New(configType)
+	config := configPtr.Interface()
+
+	// Apply base configuration if provided (from config file)
+	if baseConfig != nil {
+		if err := app.mergeConfigs(config, baseConfig); err != nil {
+			return fmt.Errorf("failed to apply base configuration: %w", err)
+		}
+	}
+
+	// Parse arguments using enhanced parser
+	binder := bind.NewBinder("posix")
+	parser := core.NewEnhancedParser(binder)
+	if err := parser.Parse(args, config); err != nil {
+		return fmt.Errorf("failed to parse arguments: %w", err)
+	}
+
+	// Validate configuration
+	if err := app.validateConfig(config); err != nil {
+		return fmt.Errorf("validation failed: %w", err)
+	}
+
+	// Log execution start
+	execCtx.Logger.Info("executing command",
+		"command", execCtx.CommandName,
+		"args", execCtx.Args,
+		"duration_so_far", execCtx.Duration(),
+	)
+
+	// Execute the command directly
+	return cmd.Execute(execCtx.Context, config)
+}
+
+// Helper methods to access executor internals
+func (app *Application) mergeConfigs(target, base any) error {
+	// This logic is copied from the executor - ideally it should be refactored to a shared utility
+	targetValue := reflect.ValueOf(target)
+	baseValue := reflect.ValueOf(base)
+
+	if targetValue.Kind() != reflect.Ptr || targetValue.Elem().Kind() != reflect.Struct {
+		return fmt.Errorf("target must be a pointer to struct")
+	}
+
+	if baseValue.Kind() == reflect.Ptr {
+		baseValue = baseValue.Elem()
+	}
+
+	if baseValue.Kind() != reflect.Struct {
+		return fmt.Errorf("base must be a struct or pointer to struct")
+	}
+
+	targetStruct := targetValue.Elem()
+	baseStruct := baseValue
+
+	// Check that both structs have the same type
+	if targetStruct.Type() != baseStruct.Type() {
+		return fmt.Errorf("target and base configurations must have the same type")
+	}
+
+	// Copy non-zero values from base to target where target field is zero
+	for i := 0; i < targetStruct.NumField(); i++ {
+		targetField := targetStruct.Field(i)
+		baseField := baseStruct.Field(i)
+
+		// Skip unexported fields
+		if !targetField.CanSet() {
+			continue
+		}
+
+		// If target field is zero and base field is not zero, copy from base
+		if targetField.IsZero() && !baseField.IsZero() {
+			if targetField.Type() == baseField.Type() {
+				targetField.Set(baseField)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (app *Application) validateConfig(config any) error {
+	// This logic is copied from the executor - ideally it should be refactored to a shared utility
+	configValue := reflect.ValueOf(config)
+	if configValue.Kind() == reflect.Ptr {
+		configValue = configValue.Elem()
+	}
+
+	analyzer := bind.NewAnalyzer("posix")
+	metadata, err := analyzer.Analyze(configValue.Type())
+	if err != nil {
+		return err
+	}
+
+	// Check required fields
+	for _, fieldInfo := range metadata.Fields {
+		if !fieldInfo.Required {
+			continue
+		}
+
+		field := configValue.FieldByName(fieldInfo.Name)
+		if !field.IsValid() || field.IsZero() {
+			return fmt.Errorf("required field %s is missing", fieldInfo.Name)
+		}
+	}
+
+	// Check choices validation
+	for _, fieldInfo := range metadata.Fields {
+		if len(fieldInfo.Choices) == 0 {
+			continue
+		}
+
+		field := configValue.FieldByName(fieldInfo.Name)
+		if !field.IsValid() || field.IsZero() {
+			continue
+		}
+
+		value := fmt.Sprintf("%v", field.Interface())
+		valid := false
+		for _, choice := range fieldInfo.Choices {
+			if value == choice {
+				valid = true
+				break
+			}
+		}
+
+		if !valid {
+			return fmt.Errorf("field %s must be one of: %v", fieldInfo.Name, fieldInfo.Choices)
+		}
+	}
+
+	return nil
 }
 
 // GetConfig returns the application configuration

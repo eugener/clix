@@ -116,7 +116,7 @@ func (e *Executor) ExecuteWithConfig(ctx context.Context, commandName string, ar
 // executeCommand method removed - use executeCommandWithConfig directly
 
 // executeCommandWithConfig executes the actual command with base configuration
-func (e *Executor) executeCommandWithConfig(execCtx *ExecutionContext, descriptor *commandDescriptor, args []string, baseConfig any) error {
+func (e *Executor) executeCommandWithConfig(execCtx *ExecutionContext, descriptor Command, args []string, baseConfig any) error {
 	// Create config instance
 	configType := descriptor.GetConfigType()
 	configPtr := reflect.New(configType)

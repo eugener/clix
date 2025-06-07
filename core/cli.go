@@ -144,7 +144,7 @@ func (c *cli) generateCommandHelp(entry commandEntry) string {
 
 // extractConfigType extracts the type parameter T from Command[T]
 func extractConfigType(cmdType reflect.Type) (reflect.Type, error) {
-	// Check if it's a CommandBase with GetConfigType method
+	// Check if it's a commandBase with GetConfigType method
 	if cmdType.Implements(reflect.TypeOf((*interface{ GetConfigType() reflect.Type })(nil)).Elem()) {
 		// Create instance and call GetConfigType
 		cmdValue := reflect.New(cmdType).Elem()

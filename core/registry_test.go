@@ -173,7 +173,7 @@ func TestRegistry_Execute_NotFound(t *testing.T) {
 	}
 }
 
-func TestCommandDescriptor_Methods(t *testing.T) {
+func TestCommand_Methods(t *testing.T) {
 	registry := NewRegistry()
 	cmd := NewCommand("test", "Test command", func(ctx context.Context, config RegistryTestConfig) error {
 		return nil

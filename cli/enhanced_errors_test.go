@@ -14,10 +14,7 @@ func TestEnhancedErrorMessages(t *testing.T) {
 	registry := core.NewRegistry()
 
 	// Register some commands
-	cmd1 := NewCommandBuilder("deploy", "Deploy the application").
-		WithAliases("d").
-		WithHandler(func() error { return nil }).
-		Build()
+	cmd1 := CmdWithAliases("deploy", "Deploy the application", []string{"d"}, func() error { return nil })
 
 	cmd2 := Cmd("list", "List items", func() error { return nil })
 

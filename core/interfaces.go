@@ -1,20 +1,36 @@
 package core
 
-import "context"
+import (
+	"context"
+	"reflect"
+)
 
-// Command represents a type-safe CLI command with configuration of type T
-type Command[T any] interface {
-	// Run executes the command with the given context and parsed configuration
-	Run(ctx context.Context, config T) error
 
-	// Name returns the command name
-	Name() string
-
-	// Description returns a brief description of the command
-	Description() string
-
-	// Aliases returns command aliases
-	Aliases() []string
+// Command provides the interface for command management
+// This allows the registry and help system to work with commands of different types
+type Command interface {
+	// Basic command information
+	GetName() string
+	GetDescription() string
+	GetAliases() []string
+	GetConfigType() reflect.Type
+	
+	// Execution
+	Execute(ctx context.Context, config any) error
+	
+	// Hierarchy support
+	HasSubcommands() bool
+	AddSubcommand(cmd Command) error
+	GetSubcommand(name string) (Command, bool)
+	ListSubcommands() map[string]Command
+	GetPath() []string
+	
+	// Parent relationship
+	SetParent(parent Command)
+	GetParent() Command
+	
+	// Internal access to the typed command instance
+	GetInstance() any
 }
 
 // CLI represents the main CLI application
