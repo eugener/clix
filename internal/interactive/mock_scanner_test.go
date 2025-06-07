@@ -43,7 +43,6 @@ func (ms *MockScanner) SetError(err error) {
 	ms.err = err
 }
 
-
 func TestConfirmPrompter_WithMockInput(t *testing.T) {
 	tests := []struct {
 		name         string

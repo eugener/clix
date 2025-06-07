@@ -326,6 +326,52 @@ func Cmd(name, description string, handler func() error) any {
 	})
 }
 
+// CmdWithAliases creates a command with aliases that takes no arguments
+func CmdWithAliases(name, description string, aliases []string, handler func() error) any {
+	return core.NewCommand(name, description, func(ctx context.Context, config struct{}) error {
+		return handler()
+	}).WithAliases(aliases...)
+}
+
+// CommandBuilder provides a fluent interface for building commands
+type CommandBuilder struct {
+	name        string
+	description string
+	aliases     []string
+	handler     func() error
+}
+
+// NewCommandBuilder creates a new command builder
+func NewCommandBuilder(name, description string) *CommandBuilder {
+	return &CommandBuilder{
+		name:        name,
+		description: description,
+	}
+}
+
+// WithAliases adds aliases to the command
+func (b *CommandBuilder) WithAliases(aliases ...string) *CommandBuilder {
+	b.aliases = aliases
+	return b
+}
+
+// WithHandler sets the command handler
+func (b *CommandBuilder) WithHandler(handler func() error) *CommandBuilder {
+	b.handler = handler
+	return b
+}
+
+// Build creates the final command
+func (b *CommandBuilder) Build() any {
+	cmd := core.NewCommand(b.name, b.description, func(ctx context.Context, config struct{}) error {
+		return b.handler()
+	})
+	if len(b.aliases) > 0 {
+		cmd.WithAliases(b.aliases...)
+	}
+	return cmd
+}
+
 // Common commands that most CLIs need
 
 // VersionCmd creates a standard version command

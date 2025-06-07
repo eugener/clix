@@ -69,26 +69,37 @@ func (g *Generator) GenerateMainHelp(commands map[string]CommandInfo) string {
 	if len(commands) > 0 {
 		sb.WriteString("Commands:\n")
 
-		// Calculate max command name length for alignment
+		// Filter out aliases and get unique commands
+		uniqueCommands := make(map[string]CommandInfo)
+		for name, cmd := range commands {
+			// Only include if this is the main command name (not an alias)
+			if cmd.Name == name {
+				uniqueCommands[name] = cmd
+			}
+		}
+
+		// Calculate max command name length for alignment (including aliases)
 		maxLen := 0
-		for name := range commands {
-			if len(name) > maxLen {
-				maxLen = len(name)
+		for name, cmd := range uniqueCommands {
+			displayName := g.formatCommandDisplayName(name, cmd.Aliases)
+			if len(displayName) > maxLen {
+				maxLen = len(displayName)
 			}
 		}
 
 		// Sort commands alphabetically
-		names := make([]string, 0, len(commands))
-		for name := range commands {
+		names := make([]string, 0, len(uniqueCommands))
+		for name := range uniqueCommands {
 			names = append(names, name)
 		}
 		sort.Strings(names)
 
 		// Format commands
 		for _, name := range names {
-			cmd := commands[name]
-			padding := strings.Repeat(" ", maxLen-len(name)+2)
-			sb.WriteString(fmt.Sprintf("  %s%s%s\n", name, padding, cmd.Description))
+			cmd := uniqueCommands[name]
+			displayName := g.formatCommandDisplayName(name, cmd.Aliases)
+			padding := strings.Repeat(" ", maxLen-len(displayName)+2)
+			sb.WriteString(fmt.Sprintf("  %s%s%s\n", displayName, padding, cmd.Description))
 		}
 		sb.WriteString("\n")
 	}
@@ -296,6 +307,7 @@ type CommandInfo struct {
 	Description string
 	ConfigType  reflect.Type
 	Examples    []string
+	Aliases     []string
 }
 
 // CommandHelpData contains data for command help template
@@ -373,3 +385,11 @@ Examples:
 {{- end}}
 {{- end}}
 `
+
+// formatCommandDisplayName formats a command name with its aliases for display
+func (g *Generator) formatCommandDisplayName(name string, aliases []string) string {
+	if len(aliases) > 0 {
+		return fmt.Sprintf("%s, %s", name, strings.Join(aliases, ", "))
+	}
+	return name
+}

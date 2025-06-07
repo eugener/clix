@@ -9,9 +9,13 @@ A powerful, type-safe, and developer-friendly CLI framework for Go with fluent A
 - **Progress Indicators**: Real-time progress bars with ETA calculation and completion tracking  
 - **Multiple Spinner Styles**: 6 predefined spinner animations for different use cases
 - **Structured Output**: JSON, YAML, Table, and Text formats with single API call
+- **Command Aliases**: Intuitive shortcuts for frequently used commands
+- **Enhanced Error Messages**: Beautiful, contextual error messages with suggestions
 
 **🚀 Key Improvements**
 - **Enhanced User Experience**: Visual feedback makes long-running commands professional
+- **Better Error Handling**: Context-aware error messages with smart suggestions and beautiful formatting
+- **Command Shortcuts**: Aliases support for improved productivity (e.g., `deploy`, `d`, `dep`)
 - **Better Integration**: Progress indicators work seamlessly with structured output
 - **Developer Friendly**: Simple APIs with powerful customization options
 - **Production Ready**: All features thoroughly tested with comprehensive examples
@@ -37,6 +41,8 @@ A powerful, type-safe, and developer-friendly CLI framework for Go with fluent A
 - **🎨 Structured Output**: JSON, YAML, Table, and Text formats with beautiful Unicode tables
 - **📊 Progress Indicators**: Progress bars and spinners with ETA calculation and customizable styles
 - **🎯 Rich UI Components**: Professional visual feedback for long-running operations
+- **⚡ Command Aliases**: Support for command shortcuts and alternative names
+- **🚨 Enhanced Error Messages**: Beautiful, contextual error messages with smart suggestions
 
 ## 📦 Installation
 
@@ -301,6 +307,105 @@ handler := cli.WithProgress("Processing data", 100, func(config T, pb *cli.Progr
 })
 ```
 
+### ⚡ Command Aliases
+
+Create intuitive shortcuts for frequently used commands:
+
+```go
+// Using CommandBuilder (fluent API)
+cmd := cli.NewCommandBuilder("deploy", "Deploy the application").
+    WithAliases("d", "dep").
+    WithHandler(func() error {
+        fmt.Println("Deploying...")
+        return nil
+    }).
+    Build()
+
+// Using helper function
+cmd := cli.CmdWithAliases("list", "List items", []string{"ls", "l"}, func() error {
+    // List items
+    return nil
+})
+
+// Multiple aliases for complex commands
+cmd := cli.NewCommandBuilder("kubernetes-deploy", "Deploy to Kubernetes").
+    WithAliases("k8s-deploy", "k8s", "deploy").
+    WithHandler(deployHandler).
+    Build()
+```
+
+**Automatic Help Integration:**
+```bash
+# Help automatically shows aliases
+$ myapp help
+Commands:
+  deploy, d, dep          Deploy the application
+  list, ls, l            List items
+  kubernetes-deploy, k8s  Deploy to Kubernetes
+
+# All aliases work identically
+$ myapp deploy --env prod
+$ myapp d --env prod      # Same as above
+$ myapp dep --env prod    # Same as above
+```
+
+### 🚨 Enhanced Error Messages
+
+Get beautiful, contextual error messages with smart suggestions:
+
+```bash
+# Unknown command with suggestions
+$ myapp deploi
+❌ Unknown command: 'deploi'
+
+💡 Did you mean:
+   → deploy
+   → delete
+
+📋 Available commands:
+   deploy, d, dep
+   list, ls, l
+   help
+
+💡 Try 'myapp help' to see available commands
+
+# Missing required flags with examples
+$ myapp deploy
+❌ Missing required flag: --env
+
+🔴 Required flags:
+   ✗ (missing) --env
+   ✗ --region
+
+📝 Examples:
+   $ myapp deploy --env prod --region us-west-2
+   $ myapp help deploy
+
+💬 Use 'myapp help deploy' for detailed usage
+
+# Configuration errors with troubleshooting
+$ myapp start --config invalid.yaml
+❌ Configuration error: configuration file not found
+
+💡 Configuration troubleshooting:
+   • Check configuration file syntax (YAML/JSON)
+   • Verify file permissions
+   • Ensure required configuration values are set
+
+📝 Configuration examples:
+   config.yaml
+   config.json
+
+💬 Use 'myapp help start' for detailed help
+```
+
+**Error Types Supported:**
+- **Unknown Commands**: Smart suggestions using Levenshtein distance
+- **Missing Required Fields**: Clear indication of what's needed
+- **Command Conflicts**: Helpful explanations for alias conflicts
+- **Configuration Errors**: Actionable troubleshooting steps
+- **Invalid Values**: Context-aware validation messages
+
 ### Middleware and Hooks
 
 ```go
@@ -342,7 +447,7 @@ The `examples/` directory contains comprehensive demonstrations:
 - **fluent-api/**: Modern fluent API showcase with structured output
 - **config/**: Configuration file management
 - **interactive/**: Interactive prompting features
-- **advanced/**: Complete feature demonstration
+- **advanced/**: Complete feature demonstration with aliases and error handling
 - **output-demo/**: Structured output formats demonstration
 - **progress-demo/**: Progress bars and spinners showcase
 
@@ -355,6 +460,12 @@ go run main.go export --format table --items 5
 cd examples/output-demo  
 go run main.go list --format json
 go run main.go list --format table
+
+# Test command aliases and error messages
+cd examples/advanced
+go run main.go deploy --env prod    # Main command
+go run main.go d --env prod         # Alias
+go run main.go deploi               # See enhanced error message
 ```
 
 ## 🏗️ Architecture

@@ -12,6 +12,9 @@ type Command[T any] interface {
 
 	// Description returns a brief description of the command
 	Description() string
+
+	// Aliases returns command aliases
+	Aliases() []string
 }
 
 // CLI represents the main CLI application

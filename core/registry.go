@@ -11,6 +11,7 @@ import (
 type CommandBase[T any] struct {
 	name        string
 	description string
+	aliases     []string
 	runner      func(ctx context.Context, config T) error
 }
 
@@ -38,6 +39,17 @@ func (c *CommandBase[T]) Run(ctx context.Context, config T) error {
 	return c.runner(ctx, config)
 }
 
+// Aliases returns the command aliases
+func (c *CommandBase[T]) Aliases() []string {
+	return c.aliases
+}
+
+// WithAliases sets command aliases
+func (c *CommandBase[T]) WithAliases(aliases ...string) *CommandBase[T] {
+	c.aliases = aliases
+	return c
+}
+
 // GetConfigType returns the reflect.Type for the config struct
 func (c *CommandBase[T]) GetConfigType() reflect.Type {
 	var zero T
@@ -55,6 +67,7 @@ type commandDescriptor struct {
 	configType reflect.Type
 	name       string
 	desc       string
+	aliases    []string
 }
 
 // NewRegistry creates a new command registry
@@ -89,18 +102,41 @@ func (r *Registry) registerBaseCommand(cmd interface{ GetConfigType() reflect.Ty
 	name := nameGetter.Name()
 	desc := descGetter.Description()
 
+	// Get aliases if available
+	var aliases []string
+	if aliasGetter, hasAliases := cmd.(interface{ Aliases() []string }); hasAliases {
+		aliases = aliasGetter.Aliases()
+	}
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	// Check if main name already exists
 	if _, exists := r.commands[name]; exists {
 		return fmt.Errorf("command %s already registered", name)
 	}
 
-	r.commands[name] = &commandDescriptor{
+	// Check if any aliases conflict
+	for _, alias := range aliases {
+		if _, exists := r.commands[alias]; exists {
+			return fmt.Errorf("command alias %s already registered", alias)
+		}
+	}
+
+	descriptor := &commandDescriptor{
 		instance:   cmd,
 		configType: configType,
 		name:       name,
 		desc:       desc,
+		aliases:    aliases,
+	}
+
+	// Register main command
+	r.commands[name] = descriptor
+
+	// Register all aliases pointing to the same descriptor
+	for _, alias := range aliases {
+		r.commands[alias] = descriptor
 	}
 
 	return nil
@@ -213,6 +249,11 @@ func (d *commandDescriptor) GetName() string {
 // GetDescription returns the command description
 func (d *commandDescriptor) GetDescription() string {
 	return d.desc
+}
+
+// GetAliases returns the command aliases
+func (d *commandDescriptor) GetAliases() []string {
+	return d.aliases
 }
 
 // GetInstance returns the command instance
