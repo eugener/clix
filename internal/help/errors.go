@@ -108,7 +108,7 @@ func (ef *ErrorFormatter) formatUnknownCommand(err error, context *ErrorContext)
 	if context.Command != "" {
 		msg.WriteString(fmt.Sprintf("💡 Try %s to see available commands\n",
 			ef.colorize(ColorYellow, fmt.Sprintf("'%s help'", ef.programName))))
-		
+
 		// Add suggestion for similar looking commands
 		if len(context.Suggestions) == 0 && len(context.AllCommands) > 0 {
 			msg.WriteString(fmt.Sprintf("📝 To see all commands: %s\n",

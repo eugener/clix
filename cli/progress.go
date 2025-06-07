@@ -157,10 +157,10 @@ type DelayedSpinnerWrapper struct {
 func (d *DelayedSpinnerWrapper) Start() {
 	go func() {
 		time.Sleep(d.delay)
-		
+
 		d.mu.Lock()
 		defer d.mu.Unlock()
-		
+
 		if !d.stopped && time.Since(d.started) >= d.delay {
 			d.spinner = NewSpinner(d.title, d.opts...)
 			d.spinner.Start()
@@ -172,7 +172,7 @@ func (d *DelayedSpinnerWrapper) Start() {
 func (d *DelayedSpinnerWrapper) Stop() {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	
+
 	d.stopped = true
 	if d.spinner != nil {
 		d.spinner.Stop()
@@ -183,7 +183,7 @@ func (d *DelayedSpinnerWrapper) Stop() {
 func (d *DelayedSpinnerWrapper) UpdateTitle(title string) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	
+
 	d.title = title
 	if d.spinner != nil {
 		d.spinner.UpdateTitle(title)

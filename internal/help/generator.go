@@ -81,10 +81,7 @@ func (g *Generator) GenerateMainHelp(commands map[string]CommandInfo) string {
 		// Calculate max command name length for alignment (including aliases)
 		maxLen := 0
 		for name, cmd := range uniqueCommands {
-			displayName := name
-			if len(cmd.Aliases) > 0 {
-				displayName = fmt.Sprintf("%s, %s", name, strings.Join(cmd.Aliases, ", "))
-			}
+			displayName := g.formatCommandDisplayName(name, cmd.Aliases)
 			if len(displayName) > maxLen {
 				maxLen = len(displayName)
 			}
@@ -100,10 +97,7 @@ func (g *Generator) GenerateMainHelp(commands map[string]CommandInfo) string {
 		// Format commands
 		for _, name := range names {
 			cmd := uniqueCommands[name]
-			displayName := name
-			if len(cmd.Aliases) > 0 {
-				displayName = fmt.Sprintf("%s, %s", name, strings.Join(cmd.Aliases, ", "))
-			}
+			displayName := g.formatCommandDisplayName(name, cmd.Aliases)
 			padding := strings.Repeat(" ", maxLen-len(displayName)+2)
 			sb.WriteString(fmt.Sprintf("  %s%s%s\n", displayName, padding, cmd.Description))
 		}
@@ -391,3 +385,11 @@ Examples:
 {{- end}}
 {{- end}}
 `
+
+// formatCommandDisplayName formats a command name with its aliases for display
+func (g *Generator) formatCommandDisplayName(name string, aliases []string) string {
+	if len(aliases) > 0 {
+		return fmt.Sprintf("%s, %s", name, strings.Join(aliases, ", "))
+	}
+	return name
+}

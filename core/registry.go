@@ -101,7 +101,7 @@ func (r *Registry) registerBaseCommand(cmd interface{ GetConfigType() reflect.Ty
 
 	name := nameGetter.Name()
 	desc := descGetter.Description()
-	
+
 	// Get aliases if available
 	var aliases []string
 	if aliasGetter, hasAliases := cmd.(interface{ Aliases() []string }); hasAliases {
@@ -115,7 +115,7 @@ func (r *Registry) registerBaseCommand(cmd interface{ GetConfigType() reflect.Ty
 	if _, exists := r.commands[name]; exists {
 		return fmt.Errorf("command %s already registered", name)
 	}
-	
+
 	// Check if any aliases conflict
 	for _, alias := range aliases {
 		if _, exists := r.commands[alias]; exists {
@@ -133,7 +133,7 @@ func (r *Registry) registerBaseCommand(cmd interface{ GetConfigType() reflect.Ty
 
 	// Register main command
 	r.commands[name] = descriptor
-	
+
 	// Register all aliases pointing to the same descriptor
 	for _, alias := range aliases {
 		r.commands[alias] = descriptor

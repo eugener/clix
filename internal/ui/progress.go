@@ -218,7 +218,7 @@ func (s *Spinner) Start() {
 func (s *Spinner) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	if !s.finished {
 		s.finished = true
 		select {

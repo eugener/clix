@@ -153,7 +153,7 @@ func TestHelpWithAliases(t *testing.T) {
 	oldArgs := os.Args
 	os.Args = []string{"test-app", "help"}
 	defer func() { os.Args = oldArgs }()
-	
+
 	app.RunWithArgs(context.Background())
 
 	// Restore stdout and read output

@@ -283,7 +283,21 @@ func (app *Application) GetHelpGenerator() *help.Generator {
 func (app *Application) buildErrorContext(err error, commandName string, args []string) *help.ErrorContext {
 	errorMsg := err.Error()
 
-	// Detect error type from message
+	// Error type detection is ordered by specificity and frequency:
+	// 1. Unknown commands (most common user error - typos in command names)
+	// 2. Command conflicts (development/registration errors - precise matching needed)
+	// 3. Configuration errors (broad category - checked before more general patterns)
+	// 4. Unknown flags (command-specific errors - require command context)
+	// 5. Missing required fields (validation errors - require detailed field analysis)
+	// 6. Invalid values (value-specific errors - require field and value context)
+	//
+	// Ordering rationale:
+	// - Most specific patterns first to avoid false positives
+	// - User-facing errors before development errors
+	// - Command-level errors before field-level errors
+	// - Common errors before rare edge cases
+
+	// Unknown commands - most common user error (typos, wrong command names)
 	if strings.Contains(errorMsg, "unknown command") || strings.Contains(errorMsg, "command not found") {
 		allCommands := app.getAllCommandNames()
 		suggestions := app.suggestions.SuggestCommands(commandName, allCommands)
@@ -296,10 +310,10 @@ func (app *Application) buildErrorContext(err error, commandName string, args []
 			Build()
 	}
 
-	// Command conflict (alias conflicts, duplicate registrations)
+	// Command conflicts - development errors during command registration
 	if strings.Contains(errorMsg, "already registered") || strings.Contains(errorMsg, "conflict") {
 		allCommands := app.getAllCommandNames()
-		
+
 		return help.NewErrorContext().
 			Type(help.ErrorTypeCommandConflict).
 			Command(commandName).
@@ -307,7 +321,7 @@ func (app *Application) buildErrorContext(err error, commandName string, args []
 			Build()
 	}
 
-	// Configuration errors
+	// Configuration errors - file loading, parsing, or validation issues
 	if strings.Contains(errorMsg, "config") || strings.Contains(errorMsg, "configuration") {
 		examples := []string{
 			"# Example YAML configuration",
@@ -315,7 +329,7 @@ func (app *Application) buildErrorContext(err error, commandName string, args []
 			"  host: localhost",
 			"  port: 5432",
 		}
-		
+
 		return help.NewErrorContext().
 			Type(help.ErrorTypeConfigurationError).
 			Command(commandName).
@@ -323,6 +337,7 @@ func (app *Application) buildErrorContext(err error, commandName string, args []
 			Build()
 	}
 
+	// Unknown flags - command-specific errors requiring flag suggestions
 	if strings.Contains(errorMsg, "unknown flag") {
 		// Extract flag from error message
 		flag := app.extractFlagFromError(errorMsg)
@@ -338,6 +353,7 @@ func (app *Application) buildErrorContext(err error, commandName string, args []
 			Build()
 	}
 
+	// Missing required fields - validation errors needing field-specific guidance
 	if strings.Contains(errorMsg, "required field") || strings.Contains(errorMsg, "missing") {
 		// Extract field from error message
 		field := app.extractFieldFromError(errorMsg)
@@ -353,6 +369,7 @@ func (app *Application) buildErrorContext(err error, commandName string, args []
 			Build()
 	}
 
+	// Validation failures - value format or constraint violations
 	if strings.Contains(errorMsg, "validation failed") {
 		examples := app.getExamplesForCommand(commandName)
 
