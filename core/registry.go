@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sync"
 )
 
 // CommandBase provides a base implementation for commands
@@ -46,6 +47,7 @@ func (c *CommandBase[T]) GetConfigType() reflect.Type {
 // Registry manages command registration with type safety
 type Registry struct {
 	commands map[string]*commandDescriptor
+	mu       sync.RWMutex
 }
 
 type commandDescriptor struct {
@@ -86,6 +88,9 @@ func (r *Registry) registerBaseCommand(cmd interface{ GetConfigType() reflect.Ty
 	
 	name := nameGetter.Name()
 	desc := descGetter.Description()
+	
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	
 	if _, exists := r.commands[name]; exists {
 		return fmt.Errorf("command %s already registered", name)
@@ -128,6 +133,9 @@ func (r *Registry) registerGenericCommand(cmd any) error {
 	name := nameResult[0].String()
 	desc := descResult[0].String()
 	
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	
 	if _, exists := r.commands[name]; exists {
 		return fmt.Errorf("command %s already registered", name)
 	}
@@ -144,12 +152,16 @@ func (r *Registry) registerGenericCommand(cmd any) error {
 
 // GetCommand returns a command descriptor by name
 func (r *Registry) GetCommand(name string) (*commandDescriptor, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	cmd, exists := r.commands[name]
 	return cmd, exists
 }
 
 // ListCommands returns all registered commands
 func (r *Registry) ListCommands() map[string]*commandDescriptor {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	result := make(map[string]*commandDescriptor)
 	for k, v := range r.commands {
 		result[k] = v
@@ -159,7 +171,10 @@ func (r *Registry) ListCommands() map[string]*commandDescriptor {
 
 // Execute runs a command with the given arguments
 func (r *Registry) Execute(ctx context.Context, name string, config any) error {
+	r.mu.RLock()
 	descriptor, exists := r.commands[name]
+	r.mu.RUnlock()
+	
 	if !exists {
 		return fmt.Errorf("command not found: %s", name)
 	}
