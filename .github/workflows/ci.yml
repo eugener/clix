@@ -1,94 +1,95 @@
 name: CI
 
 on:
-  push:
-    branches: [ master, main ]
-  pull_request:
-    branches: [ master, main ]
+    push:
+        branches: [master, main]
+    pull_request:
+        branches: [master, main]
 
 jobs:
-  test:
-    strategy:
-      matrix:
-        go-version: ['1.22', '1.23']
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    test:
+        strategy:
+            matrix:
+                go-version: ["1.22", "1.23"]
+                os: [ubuntu-latest, windows-latest, macos-latest]
+        runs-on: ${{ matrix.os }}
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-    - name: Set up Go ${{ matrix.go-version }}
-      uses: actions/setup-go@v5
-      with:
-        go-version: ${{ matrix.go-version }}
+            - name: Set up Go ${{ matrix.go-version }}
+              uses: actions/setup-go@v5
+              with:
+                  go-version: ${{ matrix.go-version }}
 
-    - name: Cache Go modules
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cache/go-build
-          ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-${{ matrix.go-version }}-
-          ${{ runner.os }}-go-
+            - name: Cache Go modules
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cache/go-build
+                      ~/go/pkg/mod
+                  key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ runner.id }}-${{ hashFiles('**/go.sum') }}
+                  #key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
+                  restore-keys: |
+                      ${{ runner.os }}-go-${{ matrix.go-version }}-
+                      ${{ runner.os }}-go-
 
-    - name: Download dependencies
-      run: go mod download
+            - name: Download dependencies
+              run: go mod download
 
-    - name: Verify dependencies
-      run: go mod verify
+            - name: Verify dependencies
+              run: go mod verify
 
-    - name: Run go vet
-      run: go vet ./...
+            - name: Run go vet
+              run: go vet ./...
 
-    - name: Run staticcheck
-      if: matrix.os == 'ubuntu-latest'
-      uses: dominikh/staticcheck-action@v1.3.0
-      with:
-        version: "latest"
-        install-go: false
+            - name: Run staticcheck
+              if: matrix.os == 'ubuntu-latest'
+              uses: dominikh/staticcheck-action@v1.3.0
+              with:
+                  version: "latest"
+                  install-go: false
 
-    - name: Run tests
-      shell: bash
-      run: go test -race -coverprofile=coverage.txt -covermode=atomic -timeout=10m ./...
+            - name: Run tests
+              shell: bash
+              run: go test -race -coverprofile=coverage.txt -covermode=atomic -timeout=10m ./...
 
-    - name: Check test coverage
-      shell: bash
-      run: |
-        go tool cover -func=coverage.txt
-        echo "## Test Coverage" >> $GITHUB_STEP_SUMMARY
-        go tool cover -func=coverage.txt | tail -1 >> $GITHUB_STEP_SUMMARY
+            - name: Check test coverage
+              shell: bash
+              run: |
+                  go tool cover -func=coverage.txt
+                  echo "## Test Coverage" >> $GITHUB_STEP_SUMMARY
+                  go tool cover -func=coverage.txt | tail -1 >> $GITHUB_STEP_SUMMARY
 
-    - name: Build all packages
-      shell: bash
-      run: go build -v ./...
+            - name: Build all packages
+              shell: bash
+              run: go build -v ./...
 
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    lint:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.23'
+            - name: Set up Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version: "1.23"
 
-    - name: Cache Go modules
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cache/go-build
-          ~/go/pkg/mod
-        key: ${{ runner.os }}-go-lint-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-lint-
-          ${{ runner.os }}-go-
+            - name: Cache Go modules
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cache/go-build
+                      ~/go/pkg/mod
+                  key: ${{ runner.os }}-go-lint-${{ hashFiles('**/go.sum') }}
+                  restore-keys: |
+                      ${{ runner.os }}-go-lint-
+                      ${{ runner.os }}-go-
 
-    - name: golangci-lint
-      uses: golangci/golangci-lint-action@v3
-      with:
-        version: v1.64.8
-        args: --timeout=10m --skip-dirs=examples
+            - name: golangci-lint
+              uses: golangci/golangci-lint-action@v3
+              with:
+                  version: v1.64.8
+                  args: --timeout=10m --skip-dirs=examples
