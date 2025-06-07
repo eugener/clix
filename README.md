@@ -2,6 +2,20 @@
 
 A powerful, type-safe, and developer-friendly CLI framework for Go with fluent API, automatic configuration management, and comprehensive developer experience features.
 
+## 🆕 What's New in v2.0
+
+**✨ Professional Visual Experience**
+- **Beautiful Unicode Tables**: Rich table formatting with proper borders and alignment
+- **Progress Indicators**: Real-time progress bars with ETA calculation and completion tracking  
+- **Multiple Spinner Styles**: 6 predefined spinner animations for different use cases
+- **Structured Output**: JSON, YAML, Table, and Text formats with single API call
+
+**🚀 Key Improvements**
+- **Enhanced User Experience**: Visual feedback makes long-running commands professional
+- **Better Integration**: Progress indicators work seamlessly with structured output
+- **Developer Friendly**: Simple APIs with powerful customization options
+- **Production Ready**: All features thoroughly tested with comprehensive examples
+
 ## 🚀 Features
 
 ### Developer Experience
@@ -18,6 +32,11 @@ A powerful, type-safe, and developer-friendly CLI framework for Go with fluent A
 - **Environment Integration**: Automatic environment variable binding
 - **Middleware Pipeline**: Composable execution with recovery, logging, and timeout
 - **Modern Go**: Uses generics, slog, context, and Go 1.21+ features
+
+### ✨ New in v2.0: Visual & Output Features
+- **🎨 Structured Output**: JSON, YAML, Table, and Text formats with beautiful Unicode tables
+- **📊 Progress Indicators**: Progress bars and spinners with ETA calculation and customizable styles
+- **🎯 Rich UI Components**: Professional visual feedback for long-running operations
 
 ## 📦 Installation
 
@@ -69,7 +88,7 @@ func main() {
 }
 ```
 
-### Advanced Configuration
+### Advanced Configuration with Modern Features
 
 ```go
 package main
@@ -77,6 +96,7 @@ package main
 import (
     "context"
     "fmt"
+    "time"
     "github.com/eugener/clix/cli"
     "github.com/eugener/clix/core"
 )
@@ -86,25 +106,50 @@ type DeployConfig struct {
     Version     string   `posix:"v,version,Version to deploy,required"`
     Replicas    int      `posix:"r,replicas,Number of replicas,default=3"`
     DryRun      bool     `posix:",dry-run,Perform a dry run"`
+    Format      string   `posix:"f,format,Output format,default=table"`
 }
 
 func main() {
     cli.New("deploy-tool").
         Version("2.0.0").
-        Description("Application deployment tool").
+        Description("Application deployment tool with modern UI").
         Interactive().
         AutoConfig().
+        TableOutput().  // Set default output format
         WithCommands(
-            core.NewCommand("deploy", "Deploy application", 
+            core.NewCommand("deploy", "Deploy application with progress tracking", 
                 func(ctx context.Context, config DeployConfig) error {
-                    if config.DryRun {
-                        fmt.Printf("DRY RUN: Would deploy %s to %s\n", 
-                            config.Version, config.Environment)
-                    } else {
-                        fmt.Printf("Deploying %s to %s with %d replicas\n", 
-                            config.Version, config.Environment, config.Replicas)
+                    // Create progress bar for deployment steps
+                    pb := cli.NewProgressBar("Deploying application", 5)
+                    pb.Start()
+                    defer pb.Finish()
+
+                    // Simulate deployment steps
+                    steps := []string{
+                        "Validating configuration...",
+                        "Building container...",
+                        "Pushing to registry...",
+                        "Updating deployment...",
+                        "Verifying rollout...",
                     }
-                    return nil
+
+                    for i, step := range steps {
+                        pb.UpdateTitle(step)
+                        time.Sleep(time.Second) // Simulate work
+                        pb.Update(i + 1)
+                    }
+
+                    // Generate deployment results
+                    result := map[string]interface{}{
+                        "environment": config.Environment,
+                        "version":     config.Version,
+                        "replicas":    config.Replicas,
+                        "status":      "success",
+                        "deployed_at": time.Now().Format(time.RFC3339),
+                    }
+
+                    // Output results in requested format
+                    return cli.FormatAndOutput(result, cli.Format(config.Format))
                 }),
         ).
         RunWithArgs(context.Background())
@@ -151,6 +196,111 @@ cli.Quick("my-app", commands...)
 
 ## 🔧 Advanced Features
 
+### ✨ Structured Output Support
+
+Generate beautiful output in multiple formats with a single API:
+
+```go
+// Support multiple output formats
+type ListConfig struct {
+    Format string `posix:"f,format,Output format (json|yaml|table|text),default=table"`
+}
+
+func listHandler(ctx context.Context, config ListConfig) error {
+    data := []map[string]interface{}{
+        {"id": 1, "name": "Server 1", "status": "running", "cpu": "45%"},
+        {"id": 2, "name": "Server 2", "status": "stopped", "cpu": "0%"},
+    }
+    
+    // Automatically format output based on user preference
+    return cli.FormatAndOutput(data, cli.Format(config.Format))
+}
+
+// Fluent API output configuration
+app := cli.New("my-app").
+    TableOutput().      // Default to table format
+    JSONOutput().       // Or default to JSON
+    YAMLOutput().       // Or default to YAML
+```
+
+**Output Examples:**
+
+```bash
+# Beautiful Unicode table (default)
+./app list
+┌────┬──────────┬─────────┬─────┐
+│ id │ name     │ status  │ cpu │
+├────┼──────────┼─────────┼─────┤
+│ 1  │ Server 1 │ running │ 45% │
+│ 2  │ Server 2 │ stopped │ 0%  │
+└────┴──────────┴─────────┴─────┘
+
+# JSON for automation
+./app list --format json
+[
+  {"id": 1, "name": "Server 1", "status": "running", "cpu": "45%"},
+  {"id": 2, "name": "Server 2", "status": "stopped", "cpu": "0%"}
+]
+
+# YAML for configuration
+./app list --format yaml
+- id: 1
+  name: Server 1
+  status: running
+  cpu: 45%
+```
+
+### 📊 Progress Indicators & UI Components
+
+Add professional visual feedback for long-running operations:
+
+```go
+// Progress bars with ETA calculation
+func processFiles(files []string) error {
+    pb := cli.NewProgressBar("Processing files", len(files))
+    pb.Start()
+    defer pb.Finish()
+    
+    for i, file := range files {
+        // Do work
+        processFile(file)
+        pb.Update(i + 1)
+    }
+    return nil
+}
+
+// Spinners for unknown duration tasks
+func connectToAPI() error {
+    spinner := cli.NewSpinner("Connecting to API...")
+    spinner.Start()
+    defer spinner.Stop()
+    
+    // Phases of work with title updates
+    spinner.UpdateTitle("Authenticating...")
+    authenticate()
+    
+    spinner.UpdateTitle("Fetching data...")
+    return fetchData()
+}
+
+// Multiple spinner styles available
+spinner := cli.NewSpinner("Loading...", 
+    cli.WithSpinnerFrames(cli.SpinnerCircle),     // ◐ ◓ ◑ ◒
+    cli.WithSpinnerFrames(cli.SpinnerArrows),     // ← ↖ ↑ ↗ → ↘ ↓ ↙
+    cli.WithSpinnerFrames(cli.SpinnerDots),       // ⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏
+)
+
+// Convenience wrappers for automatic progress handling
+handler := cli.WithProgress("Processing data", 100, func(config T, pb *cli.ProgressBar) error {
+    // Progress bar automatically managed
+    for i := 0; i < 100; i++ {
+        // do work
+        pb.Update(i + 1)
+    }
+    return nil
+})
+```
+
 ### Middleware and Hooks
 
 ```go
@@ -189,14 +339,22 @@ type Config struct {
 The `examples/` directory contains comprehensive demonstrations:
 
 - **simple/**: Traditional struct-based approach
-- **fluent-api/**: Modern fluent API showcase
+- **fluent-api/**: Modern fluent API showcase with structured output
 - **config/**: Configuration file management
 - **interactive/**: Interactive prompting features
 - **advanced/**: Complete feature demonstration
+- **output-demo/**: Structured output formats demonstration
+- **progress-demo/**: Progress bars and spinners showcase
 
 ```bash
-cd examples/fluent-api
-go run main.go --help
+# Try the new visual features
+cd examples/progress-demo
+go run main.go process --count 10 --delay 200ms
+go run main.go export --format table --items 5
+
+cd examples/output-demo  
+go run main.go list --format json
+go run main.go list --format table
 ```
 
 ## 🏗️ Architecture
