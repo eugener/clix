@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -148,9 +149,11 @@ func TestHelpWithAliases(t *testing.T) {
 	_ = w.Close()
 	os.Stdout = oldStdout
 
-	output := make([]byte, 1024)
-	n, _ := r.Read(output)
-	helpText := string(output[:n])
+	output, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatalf("Failed to read help output: %v", err)
+	}
+	helpText := string(output)
 
 	// Check that aliases are shown in help
 	if !strings.Contains(helpText, "deploy, d, dep") {
