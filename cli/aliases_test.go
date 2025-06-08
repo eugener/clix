@@ -11,15 +11,12 @@ import (
 )
 
 func TestCommandAliases(t *testing.T) {
-	// Create a command with aliases using the fluent API
+	// Create a command with aliases using the unified API
 	executed := false
-	cmd := NewCommandBuilder("deploy", "Deploy the application").
-		WithAliases("d", "dep").
-		WithHandler(func() error {
-			executed = true
-			return nil
-		}).
-		Build()
+	cmd := CmdWithAliases("deploy", "Deploy the application", []string{"d", "dep"}, func() error {
+		executed = true
+		return nil
+	})
 
 	// Create registry and register command
 	registry := core.NewRegistry()
@@ -105,10 +102,7 @@ func TestAliasConflict(t *testing.T) {
 	registry := core.NewRegistry()
 
 	// Register first command
-	cmd1 := NewCommandBuilder("deploy", "Deploy the application").
-		WithAliases("d").
-		WithHandler(func() error { return nil }).
-		Build()
+	cmd1 := CmdWithAliases("deploy", "Deploy the application", []string{"d"}, func() error { return nil })
 
 	err := registry.Register(cmd1)
 	if err != nil {
@@ -116,10 +110,7 @@ func TestAliasConflict(t *testing.T) {
 	}
 
 	// Try to register second command with conflicting alias
-	cmd2 := NewCommandBuilder("delete", "Delete something").
-		WithAliases("d").
-		WithHandler(func() error { return nil }).
-		Build()
+	cmd2 := CmdWithAliases("delete", "Delete something", []string{"d"}, func() error { return nil })
 
 	err = registry.Register(cmd2)
 	if err == nil {
@@ -139,13 +130,10 @@ func TestHelpWithAliases(t *testing.T) {
 	// Create CLI with aliases
 	app := New("test-app").
 		WithCommands(
-			NewCommandBuilder("deploy", "Deploy the application").
-				WithAliases("d", "dep").
-				WithHandler(func() error {
-					fmt.Println("Deploying...")
-					return nil
-				}).
-				Build(),
+			CmdWithAliases("deploy", "Deploy the application", []string{"d", "dep"}, func() error {
+				fmt.Println("Deploying...")
+				return nil
+			}),
 		).
 		Build()
 

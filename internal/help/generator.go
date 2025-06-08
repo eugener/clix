@@ -53,6 +53,11 @@ func NewGenerator(config *HelpConfig) *Generator {
 
 // GenerateMainHelp generates help for the main CLI
 func (g *Generator) GenerateMainHelp(commands map[string]CommandInfo) string {
+	return g.GenerateMainHelpWithParentCommands(commands, make(map[string]ParentCommandInfo))
+}
+
+// GenerateMainHelpWithParentCommands generates help for the main CLI including parent commands
+func (g *Generator) GenerateMainHelpWithParentCommands(commands map[string]CommandInfo, parentCommands map[string]ParentCommandInfo) string {
 	var sb strings.Builder
 
 	// Header
@@ -63,46 +68,24 @@ func (g *Generator) GenerateMainHelp(commands map[string]CommandInfo) string {
 
 	// Usage
 	sb.WriteString("Usage:\n")
-	sb.WriteString(fmt.Sprintf("  %s <command> [options]\n\n", g.config.ProgramName))
-
-	// Commands
-	if len(commands) > 0 {
-		sb.WriteString("Commands:\n")
-
-		// Filter out aliases and get unique commands
-		uniqueCommands := make(map[string]CommandInfo)
-		for name, cmd := range commands {
-			// Only include if this is the main command name (not an alias)
-			if cmd.Name == name {
-				uniqueCommands[name] = cmd
-			}
-		}
-
-		// Calculate max command name length for alignment (including aliases)
-		maxLen := 0
-		for name, cmd := range uniqueCommands {
-			displayName := g.formatCommandDisplayName(name, cmd.Aliases)
-			if len(displayName) > maxLen {
-				maxLen = len(displayName)
-			}
-		}
-
-		// Sort commands alphabetically
-		names := make([]string, 0, len(uniqueCommands))
-		for name := range uniqueCommands {
-			names = append(names, name)
-		}
-		sort.Strings(names)
-
-		// Format commands
-		for _, name := range names {
-			cmd := uniqueCommands[name]
-			displayName := g.formatCommandDisplayName(name, cmd.Aliases)
-			padding := strings.Repeat(" ", maxLen-len(displayName)+2)
-			sb.WriteString(fmt.Sprintf("  %s%s%s\n", displayName, padding, cmd.Description))
-		}
-		sb.WriteString("\n")
+	if len(parentCommands) > 0 {
+		sb.WriteString(fmt.Sprintf("  %s <command> [options]\n\n", g.config.ProgramName))
+	} else {
+		sb.WriteString(fmt.Sprintf("  %s <command> [options]\n\n", g.config.ProgramName))
 	}
+
+	// Filter unique commands and parent commands
+	uniqueCommands := g.filterUniqueCommands(commands)
+	uniqueParentCommands := g.filterUniqueParentCommands(parentCommands)
+	
+	// Calculate maximum display length for alignment
+	maxLen := g.calculateMaxDisplayLength(uniqueCommands, uniqueParentCommands)
+	
+	// Format command sections
+	sb.WriteString(g.formatCommandSection("Commands", uniqueCommands, maxLen, false))
+
+	// Format parent command section
+	sb.WriteString(g.formatParentCommandSection("Parent Commands", uniqueParentCommands, maxLen, true))
 
 	// Global options (if any)
 	sb.WriteString("Global Options:\n")
@@ -150,6 +133,61 @@ func (g *Generator) GenerateCommandHelp(name string, info CommandInfo) (string, 
 	}
 
 	return sb.String(), nil
+}
+
+// GenerateParentCommandHelp generates help for a specific parent command
+func (g *Generator) GenerateParentCommandHelp(info ParentCommandInfo) string {
+	var sb strings.Builder
+
+	// Header with command path
+	if len(info.Path) > 0 {
+		sb.WriteString(fmt.Sprintf("Command: %s\n", strings.Join(info.Path, " ")))
+	} else {
+		sb.WriteString(fmt.Sprintf("Command: %s\n", info.Name))
+	}
+
+	if info.Description != "" {
+		sb.WriteString(fmt.Sprintf("%s\n\n", info.Description))
+	} else {
+		sb.WriteString("\n")
+	}
+
+	// Usage
+	sb.WriteString("Usage:\n")
+	if len(info.Path) > 0 {
+		sb.WriteString(fmt.Sprintf("  %s %s <subcommand> [options]\n\n", g.config.ProgramName, strings.Join(info.Path, " ")))
+	} else {
+		sb.WriteString(fmt.Sprintf("  %s %s <subcommand> [options]\n\n", g.config.ProgramName, info.Name))
+	}
+
+	// Aliases
+	if len(info.Aliases) > 0 {
+		sb.WriteString(fmt.Sprintf("Aliases: %s\n\n", strings.Join(info.Aliases, ", ")))
+	}
+
+	// Filter unique commands and parent commands
+	uniqueCommands := g.filterUniqueCommands(info.Commands)
+	uniqueParentCommands := g.filterUniqueParentCommands(info.ParentCommands)
+	
+	// Calculate maximum display length for alignment
+	maxLen := g.calculateMaxDisplayLength(uniqueCommands, uniqueParentCommands)
+
+	// Format command sections
+	sb.WriteString(g.formatCommandSection("Commands", uniqueCommands, maxLen, false))
+
+	// Format parent command section  
+	sb.WriteString(g.formatParentCommandSection("Subcommands", uniqueParentCommands, maxLen, true))
+
+	// Help footer
+	if len(info.Path) > 0 {
+		sb.WriteString(fmt.Sprintf("Use \"%s help %s <subcommand>\" for more information about a subcommand.\n",
+			g.config.ProgramName, strings.Join(info.Path, " ")))
+	} else {
+		sb.WriteString(fmt.Sprintf("Use \"%s help %s <subcommand>\" for more information about a subcommand.\n",
+			g.config.ProgramName, info.Name))
+	}
+
+	return sb.String()
 }
 
 // buildUsage builds the usage line
@@ -225,6 +263,121 @@ func (g *Generator) buildPositionalHelp(metadata *bind.StructMetadata) []Positio
 	}
 
 	return positional
+}
+
+// Helper functions for reducing duplication
+
+// filterUniqueCommands removes aliases and returns only main command entries
+func (g *Generator) filterUniqueCommands(commands map[string]CommandInfo) map[string]CommandInfo {
+	uniqueCommands := make(map[string]CommandInfo)
+	for name, cmd := range commands {
+		// Only include if this is the main command name (not an alias)
+		if cmd.Name == name {
+			uniqueCommands[name] = cmd
+		}
+	}
+	return uniqueCommands
+}
+
+// filterUniqueParentCommands removes aliases and returns only main parent command entries
+func (g *Generator) filterUniqueParentCommands(parentCommands map[string]ParentCommandInfo) map[string]ParentCommandInfo {
+	uniqueParentCommands := make(map[string]ParentCommandInfo)
+	for name, parentCmd := range parentCommands {
+		// Only include if this is the main command name (not an alias)
+		if parentCmd.Name == name {
+			uniqueParentCommands[name] = parentCmd
+		}
+	}
+	return uniqueParentCommands
+}
+
+// calculateMaxDisplayLength calculates the maximum display length for alignment
+func (g *Generator) calculateMaxDisplayLength(uniqueCommands map[string]CommandInfo, uniqueParentCommands map[string]ParentCommandInfo) int {
+	maxLen := 0
+	
+	// Check command display lengths
+	for name, cmd := range uniqueCommands {
+		displayName := g.formatCommandDisplayName(name, cmd.Aliases)
+		if len(displayName) > maxLen {
+			maxLen = len(displayName)
+		}
+	}
+	
+	// Check parent command display lengths
+	for name, parentCmd := range uniqueParentCommands {
+		displayName := g.formatCommandDisplayName(name, parentCmd.Aliases)
+		if len(displayName) > maxLen {
+			maxLen = len(displayName)
+		}
+	}
+	
+	return maxLen
+}
+
+// formatCommandSection formats a section of commands with proper alignment
+func (g *Generator) formatCommandSection(title string, uniqueCommands map[string]CommandInfo, maxLen int, includeSubcommandCount bool) string {
+	if len(uniqueCommands) == 0 {
+		return ""
+	}
+	
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("%s:\n", title))
+	
+	// Sort commands alphabetically
+	names := make([]string, 0, len(uniqueCommands))
+	for name := range uniqueCommands {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	
+	// Format commands
+	for _, name := range names {
+		cmd := uniqueCommands[name]
+		displayName := g.formatCommandDisplayName(name, cmd.Aliases)
+		padding := strings.Repeat(" ", maxLen-len(displayName)+2)
+		sb.WriteString(fmt.Sprintf("  %s%s%s\n", displayName, padding, cmd.Description))
+	}
+	sb.WriteString("\n")
+	
+	return sb.String()
+}
+
+// formatParentCommandSection formats a section of parent commands with proper alignment
+func (g *Generator) formatParentCommandSection(title string, uniqueParentCommands map[string]ParentCommandInfo, maxLen int, includeSubcommandCount bool) string {
+	if len(uniqueParentCommands) == 0 {
+		return ""
+	}
+	
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("%s:\n", title))
+	
+	// Sort parent commands alphabetically
+	names := make([]string, 0, len(uniqueParentCommands))
+	for name := range uniqueParentCommands {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	
+	// Format parent commands
+	for _, name := range names {
+		parentCmd := uniqueParentCommands[name]
+		displayName := g.formatCommandDisplayName(name, parentCmd.Aliases)
+		padding := strings.Repeat(" ", maxLen-len(displayName)+2)
+		description := parentCmd.Description
+		
+		// Add indication of subcommand count if requested
+		if includeSubcommandCount {
+			subcommandCount := len(parentCmd.Commands) + len(parentCmd.ParentCommands)
+			if subcommandCount > 0 {
+				description = fmt.Sprintf("%s (%d subcommands)", description, subcommandCount)
+			}
+		}
+		
+		sb.WriteString(fmt.Sprintf("  %s%s%s\n", displayName, padding, description))
+	}
+	sb.WriteString("\n")
+	
+	return sb.String()
 }
 
 // getTypeString returns a human-readable type string
@@ -308,6 +461,16 @@ type CommandInfo struct {
 	ConfigType  reflect.Type
 	Examples    []string
 	Aliases     []string
+}
+
+// ParentCommandInfo contains metadata about a parent command
+type ParentCommandInfo struct {
+	Name        string
+	Description string
+	Aliases     []string
+	Commands    map[string]CommandInfo
+	ParentCommands map[string]ParentCommandInfo
+	Path        []string
 }
 
 // CommandHelpData contains data for command help template

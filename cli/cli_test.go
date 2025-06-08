@@ -139,10 +139,10 @@ func TestQuick_WithoutOsExit(t *testing.T) {
 	defer func() { os.Args = originalArgs }()
 
 	// Set test args
-	os.Args = []string{"test-app", "testfixed", "--name", "test"}
+	os.Args = []string{"test-app", "quicktest", "--name", "test"}
 
 	executed := false
-	cmd := Cmd("testfixed", "Test command", func() error {
+	cmd := Cmd("quicktest", "Test command", func() error {
 		executed = true
 		return nil
 	})
@@ -152,7 +152,7 @@ func TestQuick_WithoutOsExit(t *testing.T) {
 		Recovery().
 		WithCommands(cmd)
 
-	exitCode := app.Run(context.Background(), []string{"testfixed"})
+	exitCode := app.Run(context.Background(), []string{"quicktest"})
 	if exitCode != 0 {
 		t.Errorf("Expected exit code 0, got %d", exitCode)
 	}
@@ -222,8 +222,8 @@ func TestStandardCmds(t *testing.T) {
 	// Verify version command exists
 	found := false
 	for _, cmd := range commands {
-		if versionCmd, ok := cmd.(*core.CommandBase[struct{}]); ok {
-			if versionCmd.Name() == "version" {
+		if cmdDescriptor, ok := cmd.(core.Command); ok {
+			if cmdDescriptor.GetName() == "version" {
 				found = true
 				break
 			}

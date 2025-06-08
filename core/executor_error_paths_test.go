@@ -110,17 +110,21 @@ func TestExecutor_ReflectionErrors(t *testing.T) {
 	}()
 
 	// Create command descriptor manually to test error paths
-	descriptor := &commandDescriptor{
-		name:       "invalid",
-		desc:       "Invalid command",
-		configType: reflect.TypeOf(42), // Invalid type (not a struct)
-		instance: &struct {
-			name string
-			desc string
-		}{
-			name: "invalid",
-			desc: "Invalid command",
-		},
+	// Use LegacyCommandAdapter since we want to test invalid types
+	invalidCmd := &struct {
+		name string
+		desc string
+	}{
+		name: "invalid",
+		desc: "Invalid command",
+	}
+	
+	descriptor := &LegacyCommandAdapter{
+		name:        "invalid",
+		description: "Invalid command",
+		configType:  reflect.TypeOf(42), // Invalid type (not a struct)
+		instance:    invalidCmd,
+		runMethod:   reflect.ValueOf(func(ctx context.Context, config int) error { return nil }),
 	}
 
 	// Directly test executeCommandWithConfig with invalid descriptor
