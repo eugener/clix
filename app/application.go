@@ -10,6 +10,7 @@ import (
 	"github.com/eugener/clix/config"
 	"github.com/eugener/clix/core"
 	"github.com/eugener/clix/internal/bind"
+	configutils "github.com/eugener/clix/internal/config"
 	"github.com/eugener/clix/internal/configfile"
 	"github.com/eugener/clix/internal/help"
 	"github.com/eugener/clix/internal/interactive"
@@ -171,7 +172,7 @@ func (app *Application) Run(ctx context.Context, args []string) int {
 		
 		// Format the error with colors
 		errorMsg := fmt.Sprintf("command %s has subcommands and cannot be executed directly", commandPath)
-		formattedError := app.errorFormat.FormatError(fmt.Errorf(errorMsg), errorCtx)
+		formattedError := app.errorFormat.FormatError(fmt.Errorf("%s", errorMsg), errorCtx)
 		
 		// Show formatted error
 		fmt.Fprint(os.Stderr, formattedError)
@@ -338,17 +339,6 @@ func (app *Application) isVersionRequest(arg string) bool {
 	return arg == "version" || arg == "--version" || arg == "-v"
 }
 
-// handleParentCommandHelp handles help requests for parent commands
-func (app *Application) handleParentCommandHelp(parentName string) int {
-	if cmd, exists := app.registry.GetCommand(parentName); exists {
-		parentInfo := app.buildParentCommandInfo(cmd)
-		fmt.Print(app.helpGen.GenerateParentCommandHelp(parentInfo))
-		return 0
-	}
-	fmt.Fprintf(os.Stderr, "Unknown parent command: %s\n", parentName)
-	return 1
-}
-
 // handleCommandHelp handles help requests for specific commands
 func (app *Application) handleCommandHelp(cmd core.Command, path []string) int {
 	commandName := strings.Join(path, " ")
@@ -426,7 +416,7 @@ func (app *Application) executeResolvedCommand(ctx context.Context, cmd core.Com
 
 	// Apply base configuration if provided (from config file)
 	if baseConfig != nil {
-		if err := app.mergeConfigs(config, baseConfig); err != nil {
+		if err := configutils.MergeConfigs(config, baseConfig); err != nil {
 			return fmt.Errorf("failed to apply base configuration: %w", err)
 		}
 	}
@@ -439,7 +429,7 @@ func (app *Application) executeResolvedCommand(ctx context.Context, cmd core.Com
 	}
 
 	// Validate configuration
-	if err := app.validateConfig(config); err != nil {
+	if err := configutils.ValidateConfig(config); err != nil {
 		return fmt.Errorf("validation failed: %w", err)
 	}
 
@@ -452,106 +442,6 @@ func (app *Application) executeResolvedCommand(ctx context.Context, cmd core.Com
 
 	// Execute the command directly
 	return cmd.Execute(execCtx.Context, config)
-}
-
-// Helper methods to access executor internals
-func (app *Application) mergeConfigs(target, base any) error {
-	// This logic is copied from the executor - ideally it should be refactored to a shared utility
-	targetValue := reflect.ValueOf(target)
-	baseValue := reflect.ValueOf(base)
-
-	if targetValue.Kind() != reflect.Ptr || targetValue.Elem().Kind() != reflect.Struct {
-		return fmt.Errorf("target must be a pointer to struct")
-	}
-
-	if baseValue.Kind() == reflect.Ptr {
-		baseValue = baseValue.Elem()
-	}
-
-	if baseValue.Kind() != reflect.Struct {
-		return fmt.Errorf("base must be a struct or pointer to struct")
-	}
-
-	targetStruct := targetValue.Elem()
-	baseStruct := baseValue
-
-	// Check that both structs have the same type
-	if targetStruct.Type() != baseStruct.Type() {
-		return fmt.Errorf("target and base configurations must have the same type")
-	}
-
-	// Copy non-zero values from base to target where target field is zero
-	for i := 0; i < targetStruct.NumField(); i++ {
-		targetField := targetStruct.Field(i)
-		baseField := baseStruct.Field(i)
-
-		// Skip unexported fields
-		if !targetField.CanSet() {
-			continue
-		}
-
-		// If target field is zero and base field is not zero, copy from base
-		if targetField.IsZero() && !baseField.IsZero() {
-			if targetField.Type() == baseField.Type() {
-				targetField.Set(baseField)
-			}
-		}
-	}
-
-	return nil
-}
-
-func (app *Application) validateConfig(config any) error {
-	// This logic is copied from the executor - ideally it should be refactored to a shared utility
-	configValue := reflect.ValueOf(config)
-	if configValue.Kind() == reflect.Ptr {
-		configValue = configValue.Elem()
-	}
-
-	analyzer := bind.NewAnalyzer("posix")
-	metadata, err := analyzer.Analyze(configValue.Type())
-	if err != nil {
-		return err
-	}
-
-	// Check required fields
-	for _, fieldInfo := range metadata.Fields {
-		if !fieldInfo.Required {
-			continue
-		}
-
-		field := configValue.FieldByName(fieldInfo.Name)
-		if !field.IsValid() || field.IsZero() {
-			return fmt.Errorf("required field %s is missing", fieldInfo.Name)
-		}
-	}
-
-	// Check choices validation
-	for _, fieldInfo := range metadata.Fields {
-		if len(fieldInfo.Choices) == 0 {
-			continue
-		}
-
-		field := configValue.FieldByName(fieldInfo.Name)
-		if !field.IsValid() || field.IsZero() {
-			continue
-		}
-
-		value := fmt.Sprintf("%v", field.Interface())
-		valid := false
-		for _, choice := range fieldInfo.Choices {
-			if value == choice {
-				valid = true
-				break
-			}
-		}
-
-		if !valid {
-			return fmt.Errorf("field %s must be one of: %v", fieldInfo.Name, fieldInfo.Choices)
-		}
-	}
-
-	return nil
 }
 
 // GetConfig returns the application configuration
